@@ -1,0 +1,7 @@
+﻿  main.cpp
+F:\vcl\vcl\nvdiffrast\nvdiffrast\main.cpp(67,48): warning C4305: '引数': 'double' から 'float' へ切り詰めます。
+F:\vcl\vcl\nvdiffrast\nvdiffrast\main.cpp(178,14): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
+F:\vcl\vcl\nvdiffrast\nvdiffrast\main.cpp(179,10): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
+F:\vcl\vcl\nvdiffrast\nvdiffrast\main.cpp(180,10): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
+F:\vcl\vcl\nvdiffrast\nvdiffrast\main.cpp(181,10): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
+  nvdiffrast.vcxproj -> F:\vcl\vcl\nvdiffrast\x64\Debug\nvdiffrast.exe
