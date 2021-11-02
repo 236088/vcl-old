@@ -13,6 +13,9 @@
   <ItemGroup>
     <ClCompile Include="common.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="preset_cube.cpp" />
+    <ClCompile Include="preset_earth.cpp" />
+    <ClCompile Include="preset_modules.cpp" />
     <ClCompile Include="rasterize.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -20,6 +23,7 @@
     <ClInclude Include="common.h" />
     <ClInclude Include="interpolate.h" />
     <ClInclude Include="optimize.h" />
+    <ClInclude Include="preset.h" />
     <ClInclude Include="project.h" />
     <ClInclude Include="rasterize.h" />
     <ClInclude Include="texturemap.h" />

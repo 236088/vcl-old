@@ -27,7 +27,7 @@ class Project {
 public:
 	static void forwardInit(ProjectParams& pp, Attribute& pos);
 	static void forward(ProjectParams& pp);
-	static void backwardInit(ProjectParams& pp, float* dLdout);
+	static void backwardInit(ProjectParams& pp, Attribute& pos, float* dLdout);
 	static void backward(ProjectParams& pp);
 	static void setProjection(ProjectParams& pp, float fovy, float aspect, float znear, float zfar);
 	static void setView(ProjectParams& pp, float ex, float ey, float ez, float ox, float oy, float oz, float ux, float uy, float uz);

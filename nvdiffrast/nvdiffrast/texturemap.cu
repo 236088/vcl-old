@@ -13,6 +13,46 @@ __global__ void copy(unsigned char* data, const TexturemapParams tp) {
 	}
 }
 
+void Texturemap::loadBMP(TexturemapParams& tp, const char* path) {
+	unsigned char header[54];
+
+	FILE* file = fopen(path, "rb");
+	if (!file) {
+		printf("Image could not be opened\n");
+		return;
+	}
+	if (fread(header, 1, 54, file) != 54) {
+		printf("Not a correct BMP file\n");
+		return;
+	}
+	if (header[0] != 'B' || header[1] != 'M') {
+		printf("Not a correct BMP file\n");
+		return;
+	}
+	if (*(int*)&(header[0x12]) != tp.width || *(int*)&(header[0x16]) != tp.height) {
+		printf("Not match texWidth or texHeight value\n");
+		return;
+	}
+	unsigned int dataPos = *(int*)&(header[0x0A]);
+	unsigned int imageSize = *(int*)&(header[0x22]);
+
+	if (imageSize == 0)    imageSize = tp.width * tp.height * tp.channel;
+	if (dataPos == 0)      dataPos = 54;
+	fseek(file, dataPos, SEEK_SET);
+
+	unsigned char* data = new unsigned char[imageSize];
+	fread(data, 1, imageSize, file);
+	fclose(file);
+
+	unsigned char* dev_data;
+
+	cudaMalloc(&dev_data, tp.width * tp.height * tp.channel * sizeof(unsigned char));
+	cudaMemcpy(dev_data, data, tp.width * tp.height * tp.channel * sizeof(unsigned char), cudaMemcpyHostToDevice);
+
+	copy << < tp.grid, tp.block >> > (dev_data, tp);
+	cudaFree(dev_data);
+}
+
 __global__ void downSampling(const TexturemapParams tp, int index, int width, int height) {
 	int px = blockIdx.x * blockDim.x + threadIdx.x;
 	int py = blockIdx.y * blockDim.y + threadIdx.y;
@@ -35,6 +75,39 @@ __global__ void downSampling(const TexturemapParams tp, int index, int width, in
 		float p = (p00 + p01 + p10 + p11) * 0.25;
 		tp.miptex[index][pidx * tp.channel + i] = p;
 	}
+}
+
+void Texturemap::buildMipTexture(TexturemapParams& tp) {
+	int w = tp.width, h = tp.height;
+	for (int i = 1; i < tp.miplevel; i++) {
+		w >>= 1; h >>= 1;
+		dim3 block = getBlock(w, h);
+		dim3 grid = getGrid(block, w, h);
+		downSampling << <grid, block >> > (tp, i, w, h);
+	}
+}
+
+void Texturemap::forwardInit(TexturemapParams& tp, RenderingParams& p, RasterizeParams& rp, InterpolateParams& ip, int width, int height, int channel, int miplevel) {
+	tp.miplevel = miplevel < TEX_MAX_MIP_LEVEL ? miplevel : TEX_MAX_MIP_LEVEL;
+	if(((width >> tp.miplevel) << tp.miplevel) != width || ((height >> tp.miplevel) << tp.miplevel) != height){
+		printf("Invalid miplevel value");
+		exit(1);
+	}
+	tp.width = width;
+	tp.height = height;
+	tp.channel = channel;
+	tp.rast = rp.out;
+	tp.uv = ip.out;
+	tp.uvDA = ip.outDA;
+	tp.block = getBlock(tp.width, tp.height);
+	tp.grid = getGrid(tp.block, tp.width, tp.height);
+
+	int w = width, h = height;
+	for (int i = 0; i < miplevel; i++) {
+		cudaMalloc(&tp.miptex[i], w * h * channel * sizeof(float));
+		w >>= 1; h >>= 1;
+	}
+	cudaMalloc(&tp.out, p.width * p.height * channel * sizeof(float));
 }
 
 __device__ __forceinline__ int4 indexFetch(const TexturemapParams tp, int level, float2 uv, float2& t) {
@@ -62,12 +135,7 @@ __global__ void texturemapFowardKernel(const TexturemapParams tp, const Renderin
 	if (px >= p.width || py >= p.height || pz >= p.depth)return;
 	int pidx = px + p.width * (py + p.height * pz);
 
-	if (tp.rast[pidx * 4 + 3] < 1.0) {
-		for (int i = 0; i < tp.channel; i++) {
-			tp.out[pidx * tp.channel + i] = 0.0;
-		}
-		return;
-	}
+	if (tp.rast[pidx * 4 + 3] < 1.0) return;
 
 	float4 uvDA = ((float4*)tp.uvDA)[pidx];
 	float dsdx = uvDA.x * tp.width;
@@ -113,82 +181,11 @@ __global__ void texturemapFowardKernel(const TexturemapParams tp, const Renderin
 	}
 }
 
-void Texturemap::loadBMP(TexturemapParams& tp, const char* path) {
-	unsigned char header[54];
-
-	FILE* file = fopen(path, "rb");
-	if (!file) {
-		printf("Image could not be opened\n");
-		return;
-	}
-	if (fread(header, 1, 54, file) != 54) {
-		printf("Not a correct BMP file\n");
-		return;
-	}
-	if (header[0] != 'B' || header[1] != 'M') {
-		printf("Not a correct BMP file\n");
-		return;
-	}
-	if (*(int*)&(header[0x12]) != tp.width || *(int*)&(header[0x16]) != tp.height) {
-		printf("Not match texWidth or texHeight value\n");
-		return;
-	}
-	unsigned int dataPos = *(int*)&(header[0x0A]);
-	unsigned int imageSize = *(int*)&(header[0x22]);
-
-	if (imageSize == 0)    imageSize = tp.width * tp.height * tp.channel;
-	if (dataPos == 0)      dataPos = 54;
-	fseek(file, dataPos, SEEK_SET);
-
-	unsigned char* data = new unsigned char[imageSize];
-	fread(data, 1, imageSize, file);
-	fclose(file);
-
-	unsigned char* dev_data;
-
-	cudaMalloc(&dev_data, tp.width * tp.height * tp.channel * sizeof(unsigned char));
-	cudaMemcpy(dev_data, data, tp.width * tp.height * tp.channel * sizeof(unsigned char), cudaMemcpyHostToDevice);
-
-	copy << < tp.grid, tp.block >> > (dev_data, tp);
-	cudaFree(dev_data);
-}
-
-void Texturemap::buildMipTexture(TexturemapParams& tp) {
-	int w = tp.width, h = tp.height;
-	for (int i = 1; i < tp.miplevel; i++) {
-		w >>= 1; h >>= 1;
-		dim3 block = getBlock(w, h);
-		dim3 grid = getGrid(block, w, h);
-		downSampling << <grid, block >> > (tp, i, w, h);
-	}
-}
-
-void Texturemap::forwardInit(TexturemapParams& tp, RenderingParams& p, RasterizeParams& rp, InterpolateParams& ip, int width, int height, int channel, int miplevel) {
-	tp.miplevel = miplevel < TEX_MAX_MIP_LEVEL ? miplevel : TEX_MAX_MIP_LEVEL;
-	if(((width >> tp.miplevel) << tp.miplevel) != width || ((height >> tp.miplevel) << tp.miplevel) != height){
-		printf("Invalid miplevel value");
-		exit(1);
-	}
-	tp.width = width;
-	tp.height = height;
-	tp.channel = channel;
-	tp.rast = rp.out;
-	tp.uv = ip.out;
-	tp.uvDA = ip.outDA;
-	tp.block = getBlock(tp.width, tp.height);
-	tp.grid = getGrid(tp.block, tp.width, tp.height);
-
-	int w = width, h = height;
-	for (int i = 0; i < miplevel; i++) {
-		cudaMalloc(&tp.miptex[i], w * h * channel * sizeof(float));
-		w >>= 1; h >>= 1;
-	}
-	cudaMalloc(&tp.out, p.width * p.height * channel * sizeof(float));
-}
-
 void Texturemap::forward(TexturemapParams& tp, RenderingParams& p) {
+	cudaMemset(tp.out, 0, p.width * p.height * tp.channel * sizeof(float));
 	texturemapFowardKernel << <p.grid, p.block >> > (tp, p);
 }
+
 
 __device__ __forceinline__ void calculateLevel(const TexturemapParams tp, int pidx, int& level0, int& level1, float& flevel, float4& dleveldda) {
 	float4 uvDA = ((float4*)tp.uvDA)[pidx];

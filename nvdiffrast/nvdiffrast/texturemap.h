@@ -11,8 +11,8 @@ struct TexturemapParams {
 	int channel;
 	int miplevel;
 
-	dim3 block;
 	dim3 grid;
+	dim3 block;
 
 	float* rast;
 	float* uv;

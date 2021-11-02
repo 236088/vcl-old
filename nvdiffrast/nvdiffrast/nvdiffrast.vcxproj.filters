@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <CudaCompile Include="antialias.cu" />
+    <CudaCompile Include="interpolate.cu" />
+    <CudaCompile Include="optimize.cu" />
+    <CudaCompile Include="project.cu" />
+    <CudaCompile Include="rasterize.cu" />
+    <CudaCompile Include="texturemap.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="common.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="rasterize.cpp" />
+    <ClCompile Include="preset_cube.cpp" />
+    <ClCompile Include="preset_earth.cpp" />
+    <ClCompile Include="preset_modules.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="antialias.h" />
+    <ClInclude Include="common.h" />
+    <ClInclude Include="interpolate.h" />
+    <ClInclude Include="optimize.h" />
+    <ClInclude Include="project.h" />
+    <ClInclude Include="rasterize.h" />
+    <ClInclude Include="texturemap.h" />
+    <ClInclude Include="preset.h" />
+  </ItemGroup>
+</Project>

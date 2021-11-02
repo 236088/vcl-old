@@ -18,6 +18,7 @@
 
 #define MAX_DIM_PER_BLOCK 32
 
+
 struct Attribute {
 	float* vbo;
 	float* h_vbo;
@@ -26,16 +27,18 @@ struct Attribute {
 	int vboNum;
 	int vaoNum;
 	int dimention;
+	float* grad;
 };
 
-void attributeInit(Attribute& attr, float* h_vbo, unsigned int* h_vao, int vboNum, int vaoNum, int dimention);
+void attributeInit(Attribute& attr, float* h_vbo, unsigned int* h_vao, int vboNum, int vaoNum, int dimention, bool learn);
+void attributeGradReset(Attribute& attr);
 
 struct RenderingParams {
 	int width;
 	int height;
 	int depth;
-	dim3 block;
 	dim3 grid;
+	dim3 block;
 };
 
 class Rendering {
@@ -47,6 +50,8 @@ void loadOBJ(const char* path, Attribute& pos, Attribute& texel, Attribute& norm
 
 dim3 getBlock(int width, int height);
 dim3 getGrid(dim3 block, int width, int height);
+
+void cudaErrorCheck(const char* id, cudaError_t status);
 
 static __device__ __forceinline__ float2& operator*=  (float2& a, const float2& b) { a.x *= b.x; a.y *= b.y; return a; }
 static __device__ __forceinline__ float2& operator+=  (float2& a, const float2& b) { a.x += b.x; a.y += b.y; return a; }

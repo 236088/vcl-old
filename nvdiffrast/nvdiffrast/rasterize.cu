@@ -136,15 +136,15 @@ __global__ void RasterizeBackwardKernel(const RasterizeParams rp, const Renderin
 void Rasterize::backwardInit(RasterizeParams& rp, RenderingParams& p, float* dLdout, float* dLddb) {
     rp.dLdout = dLdout;
     rp.dLddb = dLddb;
-    cudaMalloc(&rp.gradPos, rp.posNum * 4 * sizeof(float));
+    if (!rp.enableAA)cudaMalloc(&rp.gradPos, rp.posNum * 4 * sizeof(float));
 }
 
 void Rasterize::backwardInit(RasterizeParams& rp, RenderingParams& p, float* dLdout) {
     rp.dLdout = dLdout;
-    cudaMalloc(&rp.gradPos, rp.posNum * 4 * sizeof(float));
+    if (!rp.enableAA)cudaMalloc(&rp.gradPos, rp.posNum * 4 * sizeof(float));
 }
 
 void Rasterize::backward(RasterizeParams& rp, RenderingParams& p) {
-    cudaMemset(rp.gradPos, 0, rp.posNum * 4 * sizeof(float));
+    if (!rp.enableAA) cudaMemset(rp.gradPos, 0, rp.posNum * 4 * sizeof(float));
     RasterizeBackwardKernel << <p.grid ,p.block >> > (rp, p);
 }

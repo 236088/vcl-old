@@ -4,9 +4,9 @@
 struct LossParams
 {
 	float* predict;
-	float* correct;
+	float* target;
 	float* grad;
-	float loss;
+	float* buffer;
 
 	int size;
 	int width;
@@ -18,8 +18,8 @@ struct LossParams
 
 class Loss {
 public:
-	static void init(LossParams& loss, float* predict, float* correct, int size, int width, int height, int depth);
-	static void MSE(LossParams& loss);
+	static void init(LossParams& loss, float* predict, float* target, RenderingParams& p, int dimention);
+	static float MSE(LossParams& loss);
 	static void backward(LossParams& loss);
 };
 
@@ -47,5 +47,7 @@ struct AdamParams {
 class Adam {
 public:
 	static void init(AdamParams& adam, float* param, float* grad, int size, int width, int height, int depth, double rhom, double rhov, double eta, double eps);
+	static void init(AdamParams& adam, Attribute& attr, int width, int height, int depth, double rhom, double rhov, double eta, double eps);
+	static void randomParams(AdamParams& adam);
 	static void step(AdamParams& adam);
 };

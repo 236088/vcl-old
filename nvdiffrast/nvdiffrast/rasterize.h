@@ -4,6 +4,7 @@
 
 struct RasterizeParams {
 	int enableDB;
+	int enableAA = 0;
 
 	float* pos;
 	unsigned int* idx;

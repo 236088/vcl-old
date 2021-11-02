@@ -41,9 +41,9 @@ void Project::forward(ProjectParams& pp) {
 	cudaMemcpy(pp.host_out, pp.out, pp.size * 4 * sizeof(float), cudaMemcpyDeviceToHost);
 }
 
-void Project::backwardInit(ProjectParams& pp, float* dLdout) {
+void Project::backwardInit(ProjectParams& pp, Attribute& pos, float* dLdout) {
 	pp.dLdout = dLdout;
-	cudaMalloc(&pp.gradPos, pp.size * 3 * sizeof(float));
+	pp.gradPos = pos.grad;
 }
 
 void Project::backward(ProjectParams& pp) {

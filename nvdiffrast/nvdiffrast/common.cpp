@@ -8,7 +8,7 @@ void Rendering::init(RenderingParams& rp, int width, int height, int depth) {
     rp.grid = getGrid(rp.block, width, height);
 }
 
-void attributeInit(Attribute& attr, float* h_vbo, unsigned int* h_vao, int vboNum, int vaoNum, int dimention) {
+void attributeInit(Attribute& attr, float* h_vbo, unsigned int* h_vao, int vboNum, int vaoNum, int dimention, bool learn) {
     attr.dimention = dimention;
     attr.vboNum = vboNum;
     attr.vaoNum = vaoNum;
@@ -20,7 +20,11 @@ void attributeInit(Attribute& attr, float* h_vbo, unsigned int* h_vao, int vboNu
     cudaMemcpy(attr.h_vao, h_vao, vaoNum * 3 * sizeof(float), cudaMemcpyHostToHost);
     cudaMemcpy(attr.vbo, h_vbo, vboNum * dimention * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(attr.vao, h_vao, vaoNum * 3 * sizeof(float), cudaMemcpyHostToDevice);
+    if (learn)cudaMalloc(&attr.grad, vboNum * dimention * sizeof(float));
+}
 
+void attributeGradReset(Attribute& attr) {
+    cudaMemset(attr.grad, 0, attr.vboNum * attr.dimention * sizeof(float));
 }
 
 void loadOBJ(const char* path, Attribute& pos, Attribute& texel, Attribute& normal) {
@@ -76,9 +80,9 @@ void loadOBJ(const char* path, Attribute& pos, Attribute& texel, Attribute& norm
         }
     }
 
-    if (&pos != nullptr)  attributeInit(pos, tempPos.data(), tempPosIndex.data(), tempPos.size() / 3, tempPosIndex.size() / 3, 3);
-    if (&texel != nullptr)  attributeInit(texel, tempTexel.data(), tempTexelIndex.data(), tempTexel.size() / 2, tempTexelIndex.size() / 3, 2);
-    if (&normal != nullptr)  attributeInit(normal, tempNorm.data(), tempNormIndex.data(), tempNorm.size() / 3, tempNormIndex.size() / 3, 3);
+    if (&pos != nullptr)  attributeInit(pos, tempPos.data(), tempPosIndex.data(), tempPos.size() / 3, tempPosIndex.size() / 3, 3, false);
+    if (&texel != nullptr)  attributeInit(texel, tempTexel.data(), tempTexelIndex.data(), tempTexel.size() / 2, tempTexelIndex.size() / 3, 2, false);
+    if (&normal != nullptr)  attributeInit(normal, tempNorm.data(), tempNormIndex.data(), tempNorm.size() / 3, tempNormIndex.size() / 3, 3, false);
 }
 
 dim3 getBlock(int width, int height) {
@@ -97,7 +101,11 @@ dim3 getBlock(int width, int height) {
 
 dim3 getGrid(dim3 block, int width, int height) {
     dim3 grid;
-    grid.x = (width + block.x - 1) / block.x;
-    grid.y = (height + block.y - 1) / block.y;
+    if(width|block.x) grid.x = (width + block.x - 1) / block.x;
+    if(height|block.y) grid.y = (height + block.y - 1) / block.y;
     return grid;
+}
+
+void cudaErrorCheck(const char* id, cudaError_t status) {
+    printf("%s: %d, %s\n",id, (int)status, cudaGetErrorString(status));
 }
