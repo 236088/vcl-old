@@ -1,13 +1,11 @@
-﻿  main.cpp
-  preset_cube.cpp
-F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_cube.cpp(29,52): warning C4305: '引数': 'double' から 'float' へ切り詰めます。
-F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_cube.cpp(54,53): warning C4244: '=': 'double' から 'float' への変換です。データが失われる可能性があります。
-F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_cube.cpp(55,11): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
-F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_cube.cpp(114,14): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
-F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_cube.cpp(115,10): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
-F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_cube.cpp(116,10): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
-F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_cube.cpp(117,10): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
-  preset_modules.cpp
-F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_modules.cpp(32,47): warning C4305: '引数': 'double' から 'float' へ切り詰めます。
-  コードを生成中...
+﻿  preset_earth.cpp
+F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(23,47): warning C4305: '引数': 'double' から 'float' へ切り詰めます。
+F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(51,89): warning C4305: '引数': 'double' から 'float' へ切り詰めます。
+F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(52,92): warning C4305: '引数': 'double' から 'float' へ切り詰めます。
+F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(53,119): warning C4305: '引数': 'double' から 'float' へ切り詰めます。
+F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(54,122): warning C4305: '引数': 'double' から 'float' へ切り詰めます。
+F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(59,14): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
+F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(60,10): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
+F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(61,10): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
+F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(62,10): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
   nvdiffrast.vcxproj -> F:\vcl\vcl\nvdiffrast\x64\Debug\nvdiffrast.exe

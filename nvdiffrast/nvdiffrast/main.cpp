@@ -1,12 +1,13 @@
 #include "preset.h"
 #include <ctime>
 
-PresetCube preset;
-//PresetModules preset;
+PresetEarth preset;
+//PresetCube preset;
+//PresetPrimitives preset;
 
 static void InitFunc()
 {
-	preset.init(256);
+	preset.init();
 }
 
 float loss_sum = 0;

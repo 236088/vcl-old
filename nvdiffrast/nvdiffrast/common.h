@@ -104,6 +104,11 @@ static __device__ __forceinline__ float4    operator-   (float a, const float4& 
 static __device__ __forceinline__ float dot(float2 a, float2 b) { return a.x * b.x + a.y * b.y; }
 static __device__ __forceinline__ float dot(float3 a, float3 b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 static __device__ __forceinline__ float dot(float4 a, float4 b) { return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w; }
+static __device__ __forceinline__ void swap(int& a, int& b) { int t = a; a = b; b = t; }
+static __device__ __forceinline__ void swap(float& a, float& b) { float t = a; a = b; b = t; }
+static __device__ __forceinline__ void swap(float2& a, float2& b) { float2 t = a; a = b; b = t; }
+static __device__ __forceinline__ void swap(float3& a, float3& b) { float3 t = a; a = b; b = t; }
+static __device__ __forceinline__ void swap(float4& a, float4& b) { float4 t = a; a = b; b = t; }
 static __device__ __forceinline__ float cross(float2 a, float2 b) { return a.x * b.y - a.y * b.x; }
 static __device__ __forceinline__ float3 cross(float3 a, float3 b) { return make_float3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x); }
 static __device__ __forceinline__ float lerp(float a, float b, float t) { return a + t * (b - a); }

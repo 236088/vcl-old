@@ -1,28 +1,5 @@
 #include "preset.h"
 
-void PresetCube::drawBufferInit(RenderBuffer& rb, RenderingParams& p, int attachmentNum) {
-	cudaMallocHost(&rb.pixels, p.width * p.height * 3 * sizeof(float));
-	glGenTextures(1, &rb.buffer);
-	glBindTexture(GL_TEXTURE_2D, rb.buffer);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0 + attachmentNum, rb.buffer, 0);
-}
-
-void PresetCube::drawBuffer(RenderBuffer& rb, PassParams& pass, RenderingParams& p, float minX, float maxX, float minY, float maxY) {
-	cudaMemcpy(rb.pixels, pass.ap.out, p.width * p.height * 3 * sizeof(float), cudaMemcpyDeviceToHost);
-	glBindTexture(GL_TEXTURE_2D, rb.buffer);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, p.width, p.height, 0, GL_RGB, GL_FLOAT, rb.pixels);
-	glBegin(GL_POLYGON);
-	glTexCoord2f(0.0f, 0.0f); glVertex2f(minX, minY);
-	glTexCoord2f(0.0f, 1.0f); glVertex2f(minX, maxY);
-	glTexCoord2f(1.0f, 1.0f); glVertex2f(maxX, maxY);
-	glTexCoord2f(1.0f, 0.0f); glVertex2f(maxX, minY);
-	glEnd();
-}
-
 void PresetCube::forwardInit(PassParams& pass, RenderingParams& p, Attribute& pos, Attribute& color) {
 	Project::setRotation(pass.pp, 0.0, 0.0, 1.0, 0.0);
 	Project::setView(pass.pp, 3.0, 3.0, 2.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
@@ -75,10 +52,10 @@ void PresetCube::init(int resolution) {
 	forwardInit(hr_target, hr_p, target_pos, target_color);
 	forwardInit(hr_predict, hr_p, predict_pos, predict_color);
 
-	drawBufferInit(target_buffer, p, 15);
-	drawBufferInit(predict_buffer, p, 14);
-	drawBufferInit(hr_target_buffer, hr_p, 13);
-	drawBufferInit(hr_predict_buffer, hr_p, 12);
+	drawBufferInit(target_buffer, p, 3, 15);
+	drawBufferInit(predict_buffer, p, 3, 14);
+	drawBufferInit(hr_target_buffer, hr_p, 3, 13);
+	drawBufferInit(hr_predict_buffer, hr_p, 3, 12);
 }
 
 void PresetCube::display(void) {
@@ -103,10 +80,10 @@ void PresetCube::display(void) {
 
 	glViewport(0, 0, windowWidth, windowHeight);
 	glEnable(GL_TEXTURE_2D);
-	drawBuffer(target_buffer, target, p, 0.0, 1.0, 0.0, 1.0);
-	drawBuffer(predict_buffer, predict, p, -1.0, 0.0, 0.0, 1.0);
-	drawBuffer(hr_predict_buffer, hr_target, hr_p, 0.0, 1.0, -1.0, 0.0);
-	drawBuffer(hr_target_buffer, hr_predict, hr_p, -1.0, 0.0, -1.0, 0.0);
+	drawBuffer(target_buffer, p, target.ap.out,3, GL_RGB32F, GL_RGB, 0.0, 1.0, 0.0, 1.0);
+	drawBuffer(predict_buffer, p, predict.ap.out, 3, GL_RGB32F, GL_RGB, -1.0, 0.0, 0.0, 1.0);
+	drawBuffer(hr_predict_buffer, hr_p, hr_target.ap.out, 3, GL_RGB32F, GL_RGB, 0.0, 1.0, -1.0, 0.0);
+	drawBuffer(hr_target_buffer, hr_p, hr_predict.ap.out, 3, GL_RGB32F, GL_RGB, -1.0, 0.0, -1.0, 0.0);
 	glFlush();
 }
 

@@ -4,6 +4,8 @@
 
 struct AntialiasParams {
 	int channel;
+	float xh;
+	float yh;
 
 	float* pos;
 	unsigned int* idx;

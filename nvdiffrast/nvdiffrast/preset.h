@@ -12,7 +12,10 @@ struct RenderBuffer {
 	float* pixels;
 };
 
-class PresetModules {
+void drawBufferInit(RenderBuffer& rb, RenderingParams& p, int dimention, int attachmentNum);
+void drawBuffer(RenderBuffer& rb, RenderingParams& p, float* pixels, int dimention, GLint internalformat, GLenum format,  float minX, float maxX, float minY, float maxY);
+
+class PresetPrimitives {
 
 	Attribute pos;
 	Attribute texel;
@@ -29,8 +32,6 @@ class PresetModules {
 	RenderBuffer tp_buffer;
 	RenderBuffer ap_buffer;
 
-	void drawBufferInit(RenderBuffer& rb, RenderingParams& p, int dimention, int attachmentNum);
-	void drawBuffer(RenderBuffer& rb, RenderingParams& p, float* pixels, int dimention, GLint internalformat, GLenum format,  float minX, float maxX, float minY, float maxY);
 
 public:
 	const int windowWidth = 1024;
@@ -38,6 +39,7 @@ public:
 	void init();
 	void display(void);
 	void update(void);
+	float getLoss() { return 0.0; };
 };
 
 class PresetCube {
@@ -71,8 +73,6 @@ class PresetCube {
 	AdamParams color_adam;
 	LossParams loss;
 
-	void drawBufferInit(RenderBuffer& rb, RenderingParams& p, int attachmentNum);
-	void drawBuffer(RenderBuffer& rb, PassParams& pass, RenderingParams& p, float minX, float maxX, float minY, float maxY);
 	void forwardInit(PassParams& pass, RenderingParams& p, Attribute& pos, Attribute& color);
 	void forward(PassParams& pass, RenderingParams& p);
 
@@ -80,6 +80,45 @@ public:
 	const int windowWidth = 1024;
 	const int windowHeight = 1024;
 	void init(int resolution);
+	void display(void);
+	void update(void);
+	float getLoss() { return Loss::MSE(loss); };
+};
+
+class PresetEarth {
+
+	Attribute pos;
+	Attribute texel;
+	Attribute normal;
+
+
+	RenderingParams p;
+
+	ProjectParams pp;
+	RasterizeParams rp;
+	InterpolateParams ip;
+	TexturemapParams predict_tp;
+	AntialiasParams predict_ap;
+	RenderBuffer predict_buffer;
+
+	//ProjectParams target_pp;
+	//RasterizeParams target_rp;
+	//InterpolateParams target_ip;
+	TexturemapParams target_tp;
+	AntialiasParams target_ap;
+	RenderBuffer target_buffer;
+
+	RenderBuffer tex_target_buffer;
+	RenderBuffer tex_predict_buffer;
+
+	RenderingParams tex_p;
+	AdamParams tex_adam;
+	LossParams loss;
+
+public:
+	const int windowWidth = 2560;
+	const int windowHeight = 1024;
+	void init();
 	void display(void);
 	void update(void);
 	float getLoss() { return Loss::MSE(loss); };

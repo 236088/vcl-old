@@ -7,6 +7,7 @@
     <CudaCompile Include="project.cu" />
     <CudaCompile Include="rasterize.cu" />
     <CudaCompile Include="texturemap.cu" />
+    <CudaCompile Include="preset.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="common.cpp" />
@@ -14,7 +15,7 @@
     <ClCompile Include="rasterize.cpp" />
     <ClCompile Include="preset_cube.cpp" />
     <ClCompile Include="preset_earth.cpp" />
-    <ClCompile Include="preset_modules.cpp" />
+    <ClCompile Include="preset_primitives.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="antialias.h" />
