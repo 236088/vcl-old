@@ -28,9 +28,9 @@ struct RasterizeParams {
 
 class Rasterize {
 public:
-	static void forwardInit(RasterizeParams& rp, RenderingParams& p, ProjectParams& pp, Attribute& pos, int enableDB);
+	static void init(RasterizeParams& rp, RenderingParams& p, ProjectParams& pp, Attribute& pos, int enableDB);
+	static void init(RasterizeParams& rp, RenderingParams& p, float* dLdout);
+	static void init(RasterizeParams& rp, RenderingParams& p, float* dLdout, float* dLddb);
 	static void forward(RasterizeParams& rp, RenderingParams& p);
-	static void backwardInit(RasterizeParams& rp, RenderingParams& p, float* dLdout);
-	static void backwardInit(RasterizeParams& rp, RenderingParams& p, float* dLdout, float* dLddb);
 	static void backward(RasterizeParams& rp, RenderingParams& p);
 };

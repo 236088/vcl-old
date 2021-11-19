@@ -124,3 +124,4 @@ static __device__ __forceinline__ void atomicAdd_xyw(float* ptr, float x, float 
 	atomicAdd(ptr + 1, y);
 	atomicAdd(ptr + 3, w);
 }
+static __device__ __forceinline__ void AddNaNcheck(float& a, float b) { float v = a + b; if (!isnan(v))a = v; };

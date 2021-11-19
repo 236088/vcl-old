@@ -62,7 +62,7 @@ static void linkProgram(GLuint* program, GLuint vertexShader, GLuint geometrySha
 	}
 }
 
-void Rasterize::forwardInit(RasterizeParams& rp, RenderingParams& p, ProjectParams& pp, Attribute& pos, int enableDB)
+void Rasterize::init(RasterizeParams& rp, RenderingParams& p, ProjectParams& pp, Attribute& pos, int enableDB)
 {
 	rp.pos = pp.host_out;
 	rp.idx = pos.h_vao;

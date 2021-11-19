@@ -1,6 +1,23 @@
 #include "interpolate.h"
 
-__global__ void interplateFowardKernel(const InterpolateParams ip, const RenderingParams p) {
+void Interpolate::init(InterpolateParams& ip, RenderingParams& p, RasterizeParams& rp, Attribute& attr) {
+    ip.enableDA = rp.enableDB;
+    ip.rast = rp.out;
+    ip.attrNum = attr.vboNum;
+    ip.idxNum = attr.vaoNum;
+    ip.dimention = attr.dimention;
+    ip.attr = attr.vbo;
+    ip.idx = attr.vao;
+
+    cudaMalloc(&ip.out, p.width * p.height * attr.dimention * sizeof(float));
+
+    if (ip.enableDA) {
+        ip.rastDB = rp.outDB;
+        cudaMalloc(&ip.outDA, p.width * p.height * attr.dimention * 2 * sizeof(float));
+    }
+}
+
+__global__ void InterplateForwardKernel(const InterpolateParams ip, const RenderingParams p) {
     int px = blockIdx.x * blockDim.x + threadIdx.x;
     int py = blockIdx.y * blockDim.y + threadIdx.y;
     int pz = blockIdx.z;
@@ -31,29 +48,27 @@ __global__ void interplateFowardKernel(const InterpolateParams ip, const Renderi
     }
 }
 
-void Interpolate::forwardInit(InterpolateParams& ip, RenderingParams& p, RasterizeParams& rp, Attribute& attr) {
-    ip.enableDA = rp.enableDB;
-    ip.rast = rp.out;
-    ip.attrNum = attr.vboNum;
-    ip.idxNum = attr.vaoNum;
-    ip.dimention = attr.dimention;
-    ip.attr = attr.vbo;
-    ip.idx = attr.vao;
-
-    cudaMalloc(&ip.out, p.width * p.height * attr.dimention * sizeof(float));
-
-    if (ip.enableDA) {
-        ip.rastDB = rp.outDB;
-        cudaMalloc(&ip.outDA, p.width * p.height * attr.dimention * 2 * sizeof(float));
-    }
-}
-
 void Interpolate::forward(InterpolateParams& ip, RenderingParams& p) {
     cudaMemset(ip.out, 0, p.width * p.height * ip.dimention * sizeof(float));
     if (ip.enableDA) {
         cudaMemset(ip.outDA, 0, p.width * p.height * ip.dimention * 2 * sizeof(float));
     }
-    interplateFowardKernel << <p.grid, p.block >> > (ip, p);
+    void* args[] = { &ip, &p };
+    cudaLaunchKernel(InterplateForwardKernel, p.grid, p.block, args, 0, NULL);
+}
+
+void Interpolate::init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout, float* dLdda) {
+    ip.dLdout = dLdout;
+    ip.dLdda = dLdda;
+    ip.gradAttr = attr.grad;
+    cudaMalloc(&ip.gradRast, p.width * p.height * 4 * sizeof(float));
+    cudaMalloc(&ip.gradRastDB, p.width * p.height * 4 * sizeof(float));
+}
+
+void Interpolate::init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout) {
+    ip.dLdout = dLdout;
+    ip.gradAttr = attr.grad;
+    cudaMalloc(&ip.gradRast, p.width * p.height * 4 * sizeof(float));
 }
 
 // a = u * (a0 - a2) + v * (a1 - a2) + a2
@@ -108,20 +123,7 @@ __global__ void InterpolateBackwardKernel(const InterpolateParams ip, const Rend
     ((float2*)ip.gradRast)[pidx] = make_float2(gu, gv);
 }
 
-void Interpolate::backwardInit(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout, float* dLdda) {
-    ip.dLdout = dLdout;
-    ip.dLdda = dLdda;
-    ip.gradAttr = attr.grad;
-    cudaMalloc(&ip.gradRast, p.width * p.height * 4 * sizeof(float));
-    cudaMalloc(&ip.gradRastDB, p.width * p.height * 4 * sizeof(float));
-}
-
-void Interpolate::backwardInit(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout) {
-    ip.dLdout = dLdout;
-    ip.gradAttr = attr.grad;
-    cudaMalloc(&ip.gradRast, p.width * p.height * 4 * sizeof(float));
-}
-
 void Interpolate::backward(InterpolateParams& ip, RenderingParams& p) {
-    InterpolateBackwardKernel << <p.grid, p.block>> > (ip, p);
+    void* args[] = { &ip, &p };
+    cudaLaunchKernel(InterpolateBackwardKernel, p.grid, p.block, args, 0, NULL);
 }

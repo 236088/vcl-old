@@ -1,11 +1,173 @@
-﻿  preset_earth.cpp
-F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(23,47): warning C4305: '引数': 'double' から 'float' へ切り詰めます。
-F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(51,89): warning C4305: '引数': 'double' から 'float' へ切り詰めます。
-F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(52,92): warning C4305: '引数': 'double' から 'float' へ切り詰めます。
-F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(53,119): warning C4305: '引数': 'double' から 'float' へ切り詰めます。
-F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(54,122): warning C4305: '引数': 'double' から 'float' へ切り詰めます。
-F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(59,14): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
-F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(60,10): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
-F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(61,10): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
-F:\vcl\vcl\nvdiffrast\nvdiffrast\preset_earth.cpp(62,10): warning C4244: '初期化中': 'double' から 'float' への変換です。データが失われる可能性があります。
+﻿  Compiling CUDA source file texturemap.cu...
+  
+  F:\vcl\vcl\nvdiffrast\nvdiffrast>"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.4\bin\nvcc.exe" -gencode=arch=compute_52,code=\"sm_52,compute_52\" --use-local-env -ccbin "C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30133\bin\HostX86\x64" -x cu   -IF:\vcl\vcl\nvdiffrast\packages\nupengl.core.0.1.0.1\build\native\../..//build/native/include/ -IF:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include/ -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.4\include" -I"C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v11.4\include"  -G   --keep-dir x64\Debug  -maxrregcount=0  --machine 64 --compile -cudart static  -g  -DHAS_GLM -DWIN32 -DWIN64 -D_DEBUG -D_CONSOLE -D_MBCS -Xcompiler "/EHsc /W3 /nologo /Od /Fdx64\Debug\vc142.pdb /FS /Zi /RTC1 /MDd " -o x64\Debug\texturemap.cu.obj "F:\vcl\vcl\nvdiffrast\nvdiffrast\texturemap.cu" 
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec2.hpp(94): warning : __device__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec2.hpp(94): warning : __host__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec2.hpp(95): warning : __device__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec2.hpp(95): warning : __host__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec2.hpp(143): warning : __device__ annotation is ignored on a function("operator=") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec2.hpp(143): warning : __host__ annotation is ignored on a function("operator=") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec3.hpp(98): warning : __device__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec3.hpp(98): warning : __host__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec3.hpp(99): warning : __device__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec3.hpp(99): warning : __host__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec3.hpp(176): warning : __device__ annotation is ignored on a function("operator=") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec3.hpp(176): warning : __host__ annotation is ignored on a function("operator=") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec4.hpp(97): warning : __device__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec4.hpp(97): warning : __host__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec4.hpp(98): warning : __device__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec4.hpp(98): warning : __host__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec4.hpp(249): warning : __device__ annotation is ignored on a function("operator=") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec4.hpp(249): warning : __host__ annotation is ignored on a function("operator=") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat2x2.hpp(35): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat2x2.hpp(35): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat2x3.hpp(36): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat2x3.hpp(36): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat2x4.hpp(36): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat2x4.hpp(36): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat3x2.hpp(36): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat3x2.hpp(36): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat3x3.hpp(35): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat3x3.hpp(35): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat3x4.hpp(36): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat3x4.hpp(36): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat4x2.hpp(36): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat4x2.hpp(36): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat4x3.hpp(36): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat4x3.hpp(36): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat4x4.hpp(35): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat4x4.hpp(35): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\detail/type_vec1.hpp(95): warning : __device__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\detail/type_vec1.hpp(95): warning : __host__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\detail/type_vec1.hpp(96): warning : __device__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\detail/type_vec1.hpp(96): warning : __host__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\detail/type_vec1.hpp(132): warning : __device__ annotation is ignored on a function("operator=") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\detail/type_vec1.hpp(132): warning : __host__ annotation is ignored on a function("operator=") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec2.hpp(94): warning : __device__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec2.hpp(94): warning : __host__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec2.hpp(95): warning : __device__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec2.hpp(95): warning : __host__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec2.hpp(143): warning : __device__ annotation is ignored on a function("operator=") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec2.hpp(143): warning : __host__ annotation is ignored on a function("operator=") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec3.hpp(98): warning : __device__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec3.hpp(98): warning : __host__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec3.hpp(99): warning : __device__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec3.hpp(99): warning : __host__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec3.hpp(176): warning : __device__ annotation is ignored on a function("operator=") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec3.hpp(176): warning : __host__ annotation is ignored on a function("operator=") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec4.hpp(97): warning : __device__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec4.hpp(97): warning : __host__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec4.hpp(98): warning : __device__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec4.hpp(98): warning : __host__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec4.hpp(249): warning : __device__ annotation is ignored on a function("operator=") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_vec4.hpp(249): warning : __host__ annotation is ignored on a function("operator=") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat2x2.hpp(35): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat2x2.hpp(35): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat2x3.hpp(36): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat2x3.hpp(36): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat2x4.hpp(36): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat2x4.hpp(36): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat3x2.hpp(36): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat3x2.hpp(36): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat3x3.hpp(35): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat3x3.hpp(35): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat3x4.hpp(36): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat3x4.hpp(36): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat4x2.hpp(36): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat4x2.hpp(36): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat4x3.hpp(36): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat4x3.hpp(36): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat4x4.hpp(35): warning : __device__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\ext\../detail/type_mat4x4.hpp(35): warning : __host__ annotation is ignored on a function("mat") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\detail/type_vec1.hpp(95): warning : __device__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\detail/type_vec1.hpp(95): warning : __host__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\detail/type_vec1.hpp(96): warning : __device__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\detail/type_vec1.hpp(96): warning : __host__ annotation is ignored on a function("vec") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\detail/type_vec1.hpp(132): warning : __device__ annotation is ignored on a function("operator=") that is explicitly defaulted on its first declaration
+  
+F:\vcl\vcl\nvdiffrast\packages\glm.0.9.9.800\build\native\include\glm\detail/type_vec1.hpp(132): warning : __host__ annotation is ignored on a function("operator=") that is explicitly defaulted on its first declaration
+  
+  texturemap.cu
   nvdiffrast.vcxproj -> F:\vcl\vcl\nvdiffrast\x64\Debug\nvdiffrast.exe

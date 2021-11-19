@@ -1,5 +1,16 @@
 #include "rasterize.h"
 
+void Rasterize::init(RasterizeParams& rp, RenderingParams& p, float* dLdout, float* dLddb) {
+    rp.dLdout = dLdout;
+    rp.dLddb = dLddb;
+    if (!rp.enableAA)cudaMalloc(&rp.gradPos, rp.posNum * 4 * sizeof(float));
+}
+
+void Rasterize::init(RasterizeParams& rp, RenderingParams& p, float* dLdout) {
+    rp.dLdout = dLdout;
+    if (!rp.enableAA)cudaMalloc(&rp.gradPos, rp.posNum * 4 * sizeof(float));
+}
+
 // calculate d[u, v]/d[X, yc, wc]
 //
 // [p] = [p2 + (p0 - p2) * u + (p1 - p2) * v]
@@ -133,18 +144,8 @@ __global__ void RasterizeBackwardKernel(const RasterizeParams rp, const Renderin
     atomicAdd_xyw(rp.gradPos + idx2 * 4, gx2, gy2, gw2);
 }
 
-void Rasterize::backwardInit(RasterizeParams& rp, RenderingParams& p, float* dLdout, float* dLddb) {
-    rp.dLdout = dLdout;
-    rp.dLddb = dLddb;
-    if (!rp.enableAA)cudaMalloc(&rp.gradPos, rp.posNum * 4 * sizeof(float));
-}
-
-void Rasterize::backwardInit(RasterizeParams& rp, RenderingParams& p, float* dLdout) {
-    rp.dLdout = dLdout;
-    if (!rp.enableAA)cudaMalloc(&rp.gradPos, rp.posNum * 4 * sizeof(float));
-}
-
 void Rasterize::backward(RasterizeParams& rp, RenderingParams& p) {
     if (!rp.enableAA) cudaMemset(rp.gradPos, 0, rp.posNum * 4 * sizeof(float));
-    RasterizeBackwardKernel << <p.grid ,p.block >> > (rp, p);
+    void* args[] = { &rp, &p };
+    cudaLaunchKernel(RasterizeBackwardKernel, p.grid, p.block, args, 0, NULL);
 }

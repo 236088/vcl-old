@@ -27,9 +27,9 @@ struct InterpolateParams {
 
 class Interpolate {
 public:
-	static void forwardInit(InterpolateParams& ip, RenderingParams& p, RasterizeParams& rp, Attribute& attr);
+	static void init(InterpolateParams& ip, RenderingParams& p, RasterizeParams& rp, Attribute& attr);
+	static void init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout, float* dLdda);
+	static void init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout);
 	static void forward(InterpolateParams& ip, RenderingParams& p);
-	static void backwardInit(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout, float* dLdda);
-	static void backwardInit(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout);
 	static void backward(InterpolateParams& ip, RenderingParams& p);
 };

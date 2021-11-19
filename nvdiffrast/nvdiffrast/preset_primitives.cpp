@@ -6,13 +6,13 @@ void PresetPrimitives::init() {
 	Project::setRotation(pp, 0.0, 0.0, 1.0, 0.0);
 	Project::setView(pp, 2.5, 2.5, 2.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 	Project::setProjection(pp, 45, 1.0, 0.1, 10.0);
-	Project::forwardInit(pp, pos);
-	Rasterize::forwardInit(rp, p, pp, pos, 1);
-	Interpolate::forwardInit(ip, p, rp, texel);
-	Texturemap::forwardInit(tp, p, rp, ip, 1024, 1024, 3, 8);
+	Project::init(pp, pos);
+	Rasterize::init(rp, p, pp, pos, 1);
+	Interpolate::init(ip, p, rp, texel);
+	Texturemap::init(tp, p, rp, ip, 1024, 1024, 3, 8);
 	Texturemap::loadBMP(tp, "../../checker.bmp");
 	Texturemap::buildMipTexture(tp);
-	Antialias::forwardInit(ap, p, pos, pp, rp, tp.out, 3);
+	Antialias::init(ap, p, pos, pp, rp, tp.out, 3);
 
 	drawBufferInit(rp_buffer, p, 4, 15);
 	drawBufferInit(ip_buffer, p, 2, 14);

@@ -3,20 +3,19 @@
 void PresetEarth::init() {
 	Rendering::init(p, 512, 512, 1);
 	loadOBJ("../../sphere.obj", pos, texel, normal);
-	Project::forwardInit(pp, pos);
-	Rasterize::forwardInit(rp, p, pp, pos, 1);
-	Interpolate::forwardInit(ip, p, rp, texel);
-	Texturemap::forwardInit(target_tp, p, rp, ip, 2048, 1536, 3, 8);
+	Project::init(pp, pos);
+	Rasterize::init(rp, p, pp, pos, 1);
+	Interpolate::init(ip, p, rp, texel);
+	Texturemap::init(target_tp, p, rp, ip, 2048, 1536, 3, 8);
 	Texturemap::loadBMP(target_tp, "../../earth-texture.bmp");
 	Texturemap::buildMipTexture(target_tp);
-	Antialias::forwardInit(target_ap, p, pos, pp, rp, target_tp.out, 3);
-	Texturemap::forwardInit(predict_tp, p, rp, ip, 2048, 1536, 3, 8);
-	Antialias::forwardInit(predict_ap, p, pos, pp, rp, predict_tp.out, 3);
+	Antialias::init(target_ap, p, pos, pp, rp, target_tp.out, 3);
+	Texturemap::init(predict_tp, p, rp, ip, 2048, 1536, 3, 8);
+	Antialias::init(predict_ap, p, pos, pp, rp, predict_tp.out, 3);
 	Loss::init(loss, predict_ap.out, target_ap.out, p, 3);
-	Antialias::backwardInit(predict_ap, p, rp, loss.grad);
-	Texturemap::backwardInit(predict_tp, p, predict_ap.dLdout);
-	Adam::init(tex_adam, predict_tp.miptex[0], predict_tp.gradTex, 2048 * 1536 * 3, 2048, 1536, 3, 0.9, 0.999, 1e-3, 1e-8);
-	Adam::randomParams(tex_adam);
+	Antialias::init(predict_ap, p, rp, loss.grad);
+	Texturemap::init(predict_tp, p, predict_ap.dLdout);
+	Adam::init(tex_adam, predict_tp.miptex[0], predict_tp.gradMipTex[0], 2048 * 1536 * 3, 2048, 1536, 3, 0.9, 0.999, 1e-3, 1e-8);
 
 	Project::setRotation(pp, 0.0, 0.0, 1.0, 0.0);
 	Project::setView(pp, 1.5,1.5,1.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);

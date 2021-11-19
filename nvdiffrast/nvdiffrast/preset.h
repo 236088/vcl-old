@@ -43,11 +43,13 @@ public:
 };
 
 class PresetCube {
-	struct PassParams {
+	struct Pass {
 		ProjectParams pp;
 		RasterizeParams rp;
 		InterpolateParams ip;
 		AntialiasParams ap;
+		void init(RenderingParams& p, Attribute& pos, Attribute& color);
+		void forward(RenderingParams& p);
 	};
 
 	Attribute predict_pos;
@@ -58,23 +60,22 @@ class PresetCube {
 	Attribute normal;
 
 	RenderingParams p;
-	PassParams predict;
-	RenderBuffer predict_buffer;
-	PassParams target;
-	RenderBuffer target_buffer;
+	Pass predict;
+	Pass target;
 
 	RenderingParams hr_p;
-	PassParams hr_target;
+	Pass hr_target;
+	Pass hr_predict;
+
+	RenderBuffer predict_buffer;
+	RenderBuffer target_buffer;
 	RenderBuffer hr_target_buffer;
-	PassParams hr_predict;
 	RenderBuffer hr_predict_buffer;
 
 	AdamParams pos_adam;
 	AdamParams color_adam;
 	LossParams loss;
 
-	void forwardInit(PassParams& pass, RenderingParams& p, Attribute& pos, Attribute& color);
-	void forward(PassParams& pass, RenderingParams& p);
 
 public:
 	const int windowWidth = 1024;
@@ -101,9 +102,9 @@ class PresetEarth {
 	AntialiasParams predict_ap;
 	RenderBuffer predict_buffer;
 
-	//ProjectParams target_pp;
-	//RasterizeParams target_rp;
-	//InterpolateParams target_ip;
+	ProjectParams target_pp;
+	RasterizeParams target_rp;
+	InterpolateParams target_ip;
 	TexturemapParams target_tp;
 	AntialiasParams target_ap;
 	RenderBuffer target_buffer;

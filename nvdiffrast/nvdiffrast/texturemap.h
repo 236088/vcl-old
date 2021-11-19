@@ -26,15 +26,14 @@ struct TexturemapParams {
 	float* gradUV;
 	float* gradUVDA;
 	float* gradMipTex[TEX_MAX_MIP_LEVEL];
-	float* gradTex;
 };
 
 class Texturemap {
 public:
-	static void forwardInit(TexturemapParams& tp, RenderingParams& p, RasterizeParams& rp, InterpolateParams& ip, int width, int height, int channel, int miplevel);
+	static void init(TexturemapParams& tp, RenderingParams& p, RasterizeParams& rp, InterpolateParams& ip, int width, int height, int channel, int miplevel);
+	static void init(TexturemapParams& tp, RenderingParams& p, float* dLdout);
 	static void forward(TexturemapParams& tp, RenderingParams& p);
 	static void buildMipTexture(TexturemapParams& tp);
 	static void backward(TexturemapParams& tp, RenderingParams& p);
-	static void backwardInit(TexturemapParams& tp, RenderingParams& p, float* dLdout);
 	static void loadBMP(TexturemapParams& tp, const char* path);
 };

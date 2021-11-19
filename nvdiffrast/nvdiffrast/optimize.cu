@@ -82,7 +82,8 @@ __global__ void lossGradient(const LossParams loss) {
 }
 
 void Loss::backward(LossParams& loss) {
-	lossGradient << <loss.grid, loss.block >> > (loss);
+	void* args[] = { &loss };
+	cudaLaunchKernel(lossGradient, loss.grid, loss.block, args, 0, NULL);
 }
 
 void Adam::init(AdamParams& adam, float* param, float* grad, int size, int width, int height, int depth, double rhom, double rhov, double eta, double eps) {
@@ -176,7 +177,8 @@ __global__ void random( const AdamParams adam, long seed) {
 void Adam::randomParams(AdamParams& adam) {
 	struct timespec t{};
 	long nsec = t.tv_nsec;
-	random << <adam.grid, adam.block >> > (adam, nsec);
+	void* args[] = { &adam ,&nsec};
+	cudaLaunchKernel(random , adam.grid, adam.block, args, 0, NULL);
 }
 
 __global__ void adamStep(const AdamParams adam) {
@@ -190,12 +192,13 @@ __global__ void adamStep(const AdamParams adam) {
 	adam.v[pidx] = adam.rhov * adam.v[pidx] + (1.0 - adam.rhov) * adam.grad[pidx] * adam.grad[pidx];
 	double m = adam.m[pidx] / (1.0 - adam.rhomt);
 	double v = adam.v[pidx] / (1.0 - adam.rhovt);
-	adam.param[pidx] -= adam.eta / sqrt(v + adam.eps) * m;
+	AddNaNcheck(adam.param[pidx], -adam.eta / sqrt(v + adam.eps) * m);
 }
 
 void Adam::step(AdamParams& adam) {
 	adam.it++;
 	adam.rhomt *= adam.rhom;
 	adam.rhovt *= adam.rhov;
-	adamStep << <adam.grid, adam.block >> > (adam);
+	void* args[] = { &adam };
+	cudaLaunchKernel(adamStep, adam.grid, adam.block, args, 0, NULL);
 }
