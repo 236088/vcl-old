@@ -16,6 +16,7 @@
     <ClCompile Include="preset_cube.cpp" />
     <ClCompile Include="preset_earth.cpp" />
     <ClCompile Include="preset_primitives.cpp" />
+    <ClCompile Include="matrix.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="antialias.h" />
@@ -26,5 +27,6 @@
     <ClInclude Include="rasterize.h" />
     <ClInclude Include="texturemap.h" />
     <ClInclude Include="preset.h" />
+    <ClInclude Include="matrix.h" />
   </ItemGroup>
 </Project>

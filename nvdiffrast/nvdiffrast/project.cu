@@ -1,14 +1,14 @@
 #include "project.h"
 
-void Project::init(ProjectParams& pp, Attribute& pos) {
+void Project::init(ProjectParams& pp, float* mat, Attribute& pos) {
 	pp.size = pos.vboNum;
 	pp.block = getBlock(pos.vboNum, 1);
 	pp.grid = getGrid(pp.block, pos.vboNum, 1);
-	pp.pos = pos.vbo;
+	pp.pos = pos.vbo; 
+	pp.mat = mat;
 	cudaMallocHost(&pp.host_out, pos.vboNum * 4 * sizeof(float));
 
 	cudaMalloc(&pp.out, pos.vboNum * 4 * sizeof(float));
-	cudaMalloc(&pp.mat, 16 * sizeof(float));
 }
 
 __global__ void ProjectionForwardKernel(const ProjectParams pp) {
@@ -23,10 +23,6 @@ __global__ void ProjectionForwardKernel(const ProjectParams pp) {
 }
 
 void Project::forward(ProjectParams& pp) {
-	glm::mat4 mvp = pp.projection * pp.view * pp.transform;
-
-	cudaMemcpy(pp.mat, &mvp, 16 * sizeof(float), cudaMemcpyHostToDevice);
-
 	void* args[] = { &pp };
 	cudaLaunchKernel(ProjectionForwardKernel, pp.grid, pp.block, args, 0, NULL);
 	cudaMemcpy(pp.host_out, pp.out, pp.size * 4 * sizeof(float), cudaMemcpyDeviceToHost);
@@ -50,23 +46,4 @@ __global__ void ProjectionBackwardKernel(const ProjectParams pp) {
 void Project::backward(ProjectParams& pp) {
 	void* args[] = { &pp };
 	cudaLaunchKernel(ProjectionBackwardKernel, pp.grid, pp.block, args, 0, NULL);
-}
-
-void Project::setRotation(ProjectParams& pp, float degree, float vx, float vy, float vz) {
-	pp.transform = glm::rotate(glm::radians(degree), glm::vec3(vx, vy, vz));
-}
-
-void Project::addRotation(ProjectParams& pp, float degree, float vx, float vy, float vz) {
-	pp.transform = glm::rotate(pp.transform, glm::radians(degree), glm::vec3(vx, vy, vz));
-}
-
-void Project::setView(ProjectParams& pp, float ex, float ey, float ez, float ox, float oy, float oz, float ux, float uy, float uz) {
-	pp.eye = glm::vec3(ex, ey, ez);
-	pp.origin = glm::vec3(ox, oy, oz);
-	pp.up = glm::vec3(ux, uy, uz);
-	pp.view = glm::lookAt(pp.eye, pp.origin, pp.up);
-}
-
-void Project::setProjection(ProjectParams& pp, float fovy, float aspect, float znear, float zfar) {
-	pp.projection = glm::perspective(glm::radians(fovy), aspect, znear, zfar);
 }

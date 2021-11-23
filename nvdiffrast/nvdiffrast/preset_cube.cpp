@@ -1,10 +1,7 @@
 #include "preset.h"
 
-void PresetCube::Pass::init(RenderingParams& p, Attribute& pos, Attribute& color) {
-	Project::setRotation(pp, 0.0, 0.0, 1.0, 0.0);
-	Project::setView(pp, 3.0, 3.0, 2.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-	Project::setProjection(pp, 45, 1.0, 0.1, 10.0);
-	Project::init(pp, pos);
+void PresetCube::Pass::init(RenderingParams& p, Matrix& mat, Attribute& pos, Attribute& color) {
+	Project::init(pp, mat.mvp, pos);
 	Rasterize::init(rp, p, pp, pos, 0);
 	Interpolate::init(ip, p, rp, color);
 	Antialias::init(ap, p, pos, pp, rp, ip.out, 3);
@@ -19,6 +16,12 @@ void PresetCube::Pass::forward(RenderingParams& p) {
 
 
 void PresetCube::init(int resolution) {
+	Matrix::init(mat);
+	Matrix::setFovy(mat, 45);
+	Matrix::setEye(mat, 3.0, 3.0, 2.0);
+	Matrix::init(hr_mat);
+	Matrix::setFovy(hr_mat, 45);
+	Matrix::setEye(hr_mat, 3.0, 3.0, 2.0);
 	Rendering::init(p, resolution, resolution, 1);
 	Rendering::init(hr_p, 512, 512, 1);
 	loadOBJ("../../cube.obj", target_pos, texel, normal);
@@ -38,8 +41,8 @@ void PresetCube::init(int resolution) {
 	attributeInit(predict_color, predict_color_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3, true);
 	cudaFree(target_color_vbo); cudaFree(predict_pos_vbo); cudaFree(predict_color_vbo);
 
-	target.init(p, target_pos, target_color);
-	predict.init(p, predict_pos, predict_color);
+	target.init(p, mat, target_pos, target_color);
+	predict.init(p, mat, predict_pos, predict_color);
 
 	Loss::init(loss, predict.ap.out, target.ap.out, p, 3);
 	Antialias::init(predict.ap, p, predict.rp, loss.grad);
@@ -49,8 +52,8 @@ void PresetCube::init(int resolution) {
 	Adam::init(pos_adam, predict_pos, predict_pos.vboNum, 3, 1, 0.9, 0.999, 1e-3, 1e-8);
 	Adam::init(color_adam, predict_color, predict_color.vboNum, 3, 1, 0.9, 0.999, 1e-3, 1e-8);
 
-	hr_target.init(hr_p, target_pos, target_color);
-	hr_predict.init(hr_p, predict_pos, predict_color);
+	hr_target.init(hr_p, hr_mat, target_pos, target_color);
+	hr_predict.init(hr_p, hr_mat, predict_pos, predict_color);
 
 	drawBufferInit(target_buffer, p, 3, 15);
 	drawBufferInit(predict_buffer, p, 3, 14);
@@ -59,6 +62,7 @@ void PresetCube::init(int resolution) {
 }
 
 void PresetCube::display(void) {
+	Matrix::forward(mat);
 	target.forward(p);
 	predict.forward(p);
 
@@ -72,6 +76,7 @@ void PresetCube::display(void) {
 	Adam::step(pos_adam);
 	Adam::step(color_adam);
 
+	Matrix::forward(hr_mat);
 	hr_target.forward(hr_p);
 	hr_predict.forward(hr_p);
 
@@ -92,8 +97,6 @@ void PresetCube::update(void) {
 	float x = (float)rand() / (float)RAND_MAX * 2.0 - 1.0;
 	float y = (float)rand() / (float)RAND_MAX * 2.0 - 1.0;
 	float z = (float)rand() / (float)RAND_MAX * 2.0 - 1.0;
-	Project::setRotation(predict.pp, theta, x, y, z);
-	Project::setRotation(target.pp, theta, x, y, z);
-	Project::addRotation(hr_predict.pp, 1.0, 0.0, 1.0, 0.0);
-	Project::addRotation(hr_target.pp, 1.0, 0.0, 1.0, 0.0);
+	Matrix::setRotation(mat, theta, x, y, z);
+	Matrix::addRotation(hr_mat, 1.0, 0.0, 1.0, 0.0);
 }

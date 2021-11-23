@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "matrix.h"
 #include "optimize.h"
 #include "project.h"
 #include "rasterize.h"
@@ -16,6 +17,7 @@ void drawBufferInit(RenderBuffer& rb, RenderingParams& p, int dimention, int att
 void drawBuffer(RenderBuffer& rb, RenderingParams& p, float* pixels, int dimention, GLint internalformat, GLenum format,  float minX, float maxX, float minY, float maxY);
 
 class PresetPrimitives {
+	Matrix mat;
 
 	Attribute pos;
 	Attribute texel;
@@ -43,12 +45,15 @@ public:
 };
 
 class PresetCube {
+	Matrix mat;
+	Matrix hr_mat;
+
 	struct Pass {
 		ProjectParams pp;
 		RasterizeParams rp;
 		InterpolateParams ip;
 		AntialiasParams ap;
-		void init(RenderingParams& p, Attribute& pos, Attribute& color);
+		void init(RenderingParams& p, Matrix& mat, Attribute& pos, Attribute& color);
 		void forward(RenderingParams& p);
 	};
 
@@ -87,6 +92,7 @@ public:
 };
 
 class PresetEarth {
+	Matrix mat;
 
 	Attribute pos;
 	Attribute texel;

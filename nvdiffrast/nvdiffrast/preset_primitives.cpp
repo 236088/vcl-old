@@ -1,12 +1,12 @@
 #include "preset.h"
 
 void PresetPrimitives::init() {
+	Matrix::init(mat);
+	Matrix::setFovy(mat, 45);
+	Matrix::setEye(mat, 2.5, 2.5, 2.5);
 	Rendering::init(p, 512, 512, 1);
 	loadOBJ("../../monkey.obj", pos, texel, normal);
-	Project::setRotation(pp, 0.0, 0.0, 1.0, 0.0);
-	Project::setView(pp, 2.5, 2.5, 2.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-	Project::setProjection(pp, 45, 1.0, 0.1, 10.0);
-	Project::init(pp, pos);
+	Project::init(pp, mat.mvp, pos);
 	Rasterize::init(rp, p, pp, pos, 1);
 	Interpolate::init(ip, p, rp, texel);
 	Texturemap::init(tp, p, rp, ip, 1024, 1024, 3, 8);
@@ -21,6 +21,7 @@ void PresetPrimitives::init() {
 }
 
 void PresetPrimitives::display(void) {
+	Matrix::forward(mat);
 	Project::forward(pp);
 	Rasterize::forward(rp, p);
 	Interpolate::forward(ip, p);
@@ -40,5 +41,5 @@ void PresetPrimitives::display(void) {
 }
 
 void PresetPrimitives::update(void) {
-	Project::addRotation(pp, 1.0, 0.0, 1.0, 0.0);
+	Matrix::addRotation(mat, 1.0, 0.0, 1.0, 0.0);
 }

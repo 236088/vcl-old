@@ -1,9 +1,12 @@
 #include "preset.h"
 
 void PresetEarth::init() {
+	Matrix::init(mat);
+	Matrix::setFovy(mat, 30);
+	Matrix::setEye(mat, 1.5, 1.5, 1.5);
 	Rendering::init(p, 512, 512, 1);
 	loadOBJ("../../sphere.obj", pos, texel, normal);
-	Project::init(pp, pos);
+	Project::init(pp, mat.mvp, pos);
 	Rasterize::init(rp, p, pp, pos, 1);
 	Interpolate::init(ip, p, rp, texel);
 	Texturemap::init(target_tp, p, rp, ip, 2048, 1536, 3, 8);
@@ -17,10 +20,6 @@ void PresetEarth::init() {
 	Texturemap::init(predict_tp, p, predict_ap.dLdout);
 	Adam::init(tex_adam, predict_tp.miptex[0], predict_tp.gradMipTex[0], 2048 * 1536 * 3, 2048, 1536, 3, 0.9, 0.999, 1e-3, 1e-8);
 
-	Project::setRotation(pp, 0.0, 0.0, 1.0, 0.0);
-	Project::setView(pp, 1.5,1.5,1.5, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-	Project::setProjection(pp, 30, 1.0, 0.1, 10.0);
-
 	Rendering::init(tex_p, 2048, 512, 1);
 	drawBufferInit(predict_buffer, p, 3, 15);
 	drawBufferInit(target_buffer, p, 3, 14);
@@ -29,6 +28,7 @@ void PresetEarth::init() {
 }
 
 void PresetEarth::display(void) {
+	Matrix::forward(mat);
 	Project::forward(pp);
 	Rasterize::forward(rp, p);
 	Interpolate::forward(ip, p);
@@ -59,5 +59,5 @@ void PresetEarth::update(void) {
 	float x = (float)rand() / (float)RAND_MAX * 2.0 - 1.0;
 	float y = (float)rand() / (float)RAND_MAX * 2.0 - 1.0;
 	float z = (float)rand() / (float)RAND_MAX * 2.0 - 1.0;
-	Project::addRotation(pp, theta, x, y, z);
+	Matrix::addRotation(mat, theta, x, y, z);
 }

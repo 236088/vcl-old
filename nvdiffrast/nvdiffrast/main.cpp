@@ -1,9 +1,9 @@
 #include "preset.h"
 #include <ctime>
 
-PresetEarth preset;
+//PresetEarth preset;
 //PresetCube preset;
-//PresetPrimitives preset;
+PresetPrimitives preset;
 
 static void InitFunc()
 {
