@@ -1,9 +1,10 @@
 #include "preset.h"
 #include <ctime>
 
-PresetEarth preset;
+//PresetMine preset;
+//PresetEarth preset;
 //PresetCube preset;
-//PresetPrimitives preset;
+PresetPrimitives preset;
 
 static void InitFunc()
 {
@@ -13,6 +14,7 @@ static void InitFunc()
 float loss_sum = 0;
 int count = 0;
 int interbal = 100;
+bool play = false;
 static void DisplayFunc(void)
 {
 	preset.display();
@@ -21,12 +23,11 @@ static void DisplayFunc(void)
 		printf(" count: %d, loss: %f\n", count, loss_sum / interbal);
 		loss_sum = 0;
 	}
-	if (count > 5000)exit(0);
+	if (count > 1000000)play = false;
 }
 
 struct timespec pre, cur;
 double t;
-bool play = false;
 static void IdleFunc(void) 
 {	
 	if (!play)return;

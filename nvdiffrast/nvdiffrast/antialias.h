@@ -1,30 +1,45 @@
 #pragma once
 #include "common.h"
+#include "buffer.h"
 #include "rasterize.h"
 
-struct AntialiasParams {
+struct AntialiasKernelParams {
+	int width;
+	int height;
+	int depth;
 	int channel;
 	float xh;
 	float yh;
-
-	float* pos;
-	unsigned int* idx;
 	float* rast;
+	unsigned int* idx;
+
+	float* proj;
 	float* in;
-	int posNum;
 
 	float* out;
+};
 
-	float* dLdout;
+struct AntialiasKernelGradParams {
+	float* proj;
+	float* in;
 
-	float* gradPos;
-	float* gradIn;
+	float* out;
+};
+
+struct AntialiasParams {
+	dim3 grid;
+	dim3 block;
+	AntialiasKernelParams params;
+};
+
+struct AntialiasGradParams :AntialiasParams {
+	AntialiasKernelGradParams grad;
 };
 
 class Antialias {
 public:
-	static void init(AntialiasParams& ap, RenderingParams& p, Attribute& pos, ProjectParams& pp, RasterizeParams& rp, float* in, int channel);
-	static void init(AntialiasParams& ap, RenderingParams& p, RasterizeParams& rp, float* dLdout);
-	static void forward(AntialiasParams& ap, RenderingParams& p);
-	static void backward(AntialiasParams& ap, RenderingParams& p);
+	static void init(AntialiasParams& p, RenderBuffer& aa, Attribute& proj, RenderBuffer& in, RenderBuffer& rast);
+	static void init(AntialiasGradParams& p, RenderBufferGrad& aa, AttributeGrad& proj, RenderBufferGrad& in, RenderBuffer& rast);
+	static void forward(AntialiasParams& p);
+	static void backward(AntialiasGradParams& p);
 };

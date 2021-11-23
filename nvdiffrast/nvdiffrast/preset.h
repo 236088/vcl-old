@@ -1,37 +1,49 @@
 #pragma once
 #include "common.h"
-#include "optimize.h"
-#include "project.h"
+#include "buffer.h";
+#include "matrix.h"
+#include "transform.h"
 #include "rasterize.h"
 #include "interpolate.h"
 #include "texturemap.h"
 #include "antialias.h"
+#include "optimize.h"
 
-struct RenderBuffer {
-	GLuint buffer;
-	float* pixels;
+struct GLBuffer {
+	GLuint id;
+	float* buffer;
+	static void initGLbuffer(GLBuffer& gl, int width, int height, int channel, int attachmentNum);
+	static void initGLbuffer(GLBuffer& gl, RenderBuffer& render, int attachmentNum);
+	static void drawGLbuffer(GLBuffer& rb, float* pixels, int width, int height, int dimention, GLint internalformat, GLenum format, float minX, float maxX, float minY, float maxY);
+	static void drawGLbuffer(GLBuffer& rb, RenderBuffer& render, GLint internalformat, GLenum format, float minX, float maxX, float minY, float maxY);
 };
 
-void drawBufferInit(RenderBuffer& rb, RenderingParams& p, int dimention, int attachmentNum);
-void drawBuffer(RenderBuffer& rb, RenderingParams& p, float* pixels, int dimention, GLint internalformat, GLenum format,  float minX, float maxX, float minY, float maxY);
-
 class PresetPrimitives {
-
+	Matrix mat;
 	Attribute pos;
 	Attribute texel;
-	Attribute normal;
+	Attribute proj;
+	AttributeHost host_proj;
+	RenderBuffer rast;
+	RenderBufferHost host_rast;
+	RenderBuffer rastDB;
+	RenderBufferHost host_rastDB;
+	RenderBuffer intr;
+	RenderBuffer intrDA;
+	RenderBuffer tex;
+	RenderBuffer aa;
+	MipTexture texture;
 
-	RenderingParams p;
-	ProjectParams pp;
+	TransformParams trans;
 	RasterizeParams rp;
 	InterpolateParams ip;
 	TexturemapParams tp;
 	AntialiasParams ap;
-	RenderBuffer rp_buffer;
-	RenderBuffer ip_buffer;
-	RenderBuffer tp_buffer;
-	RenderBuffer ap_buffer;
 
+	GLBuffer gl_rast;
+	GLBuffer gl_intr;
+	GLBuffer gl_tex;
+	GLBuffer gl_aa;
 
 public:
 	const int windowWidth = 1024;
@@ -42,40 +54,50 @@ public:
 	float getLoss() { return 0.0; };
 };
 
+/*
 class PresetCube {
+	Matrix mat;
+
+	Attribute target_pos;
+	Attribute target_color;
+	Attribute target_proj;
+	TransformParams target_trans;
+
+	AttributeGrad predict_pos;
+	AttributeGrad predict_color;
+	AttributeGrad predict_proj;
+	TransformGradParams predict_trans;
+
 	struct Pass {
-		ProjectParams pp;
+		RenderBuffer rast;
+		RenderBuffer intr;
+		RenderBuffer aa;
 		RasterizeParams rp;
 		InterpolateParams ip;
 		AntialiasParams ap;
-		void init(RenderingParams& p, Attribute& pos, Attribute& color);
-		void forward(RenderingParams& p);
+		void init(Attribute& proj, Attribute& color);
+		void forward();
 	};
 
-	Attribute predict_pos;
-	Attribute predict_color;
-	Attribute target_pos;
-	Attribute target_color;
-	Attribute texel;
-	Attribute normal;
+	RenderBufferGrad rast;
+	RenderBufferGrad intr;
+	RenderBufferGrad aa;
+	RasterizeGradParams rp;
+	InterpolateGradParams ip;
+	AntialiasGradParams ap;
 
-	RenderingParams p;
-	Pass predict;
 	Pass target;
-
-	RenderingParams hr_p;
 	Pass hr_target;
 	Pass hr_predict;
 
-	RenderBuffer predict_buffer;
-	RenderBuffer target_buffer;
-	RenderBuffer hr_target_buffer;
-	RenderBuffer hr_predict_buffer;
+	GLBuffer gl_predict;
+	GLBuffer gl_target;
+	GLBuffer hrgl_target;
+	GLBuffer hrgl_predict;
 
 	AdamParams pos_adam;
 	AdamParams color_adam;
-	LossParams loss;
-
+	MSELossParams loss;
 
 public:
 	const int windowWidth = 1024;
@@ -83,38 +105,40 @@ public:
 	void init(int resolution);
 	void display(void);
 	void update(void);
-	float getLoss() { return Loss::MSE(loss); };
+	float getLoss() { return MSELoss::loss(loss); };
 };
 
 class PresetEarth {
 
 	Attribute pos;
 	Attribute texel;
-	Attribute normal;
+	Attribute proj;
 
+	Matrix mat;
 
-	RenderingParams p;
+	RenderBuffer rast;
+	RenderBuffer intr;
+	RenderBufferGrad tex;
+	RenderBufferGrad aa;
+	RenderBuffer target_tex;
+	RenderBuffer target_aa;
 
-	ProjectParams pp;
+	TransformParams trans;
 	RasterizeParams rp;
-	InterpolateParams ip;
+	InterpolateParams p;
 	TexturemapParams predict_tp;
 	AntialiasParams predict_ap;
-	RenderBuffer predict_buffer;
 
-	ProjectParams target_pp;
-	RasterizeParams target_rp;
-	InterpolateParams target_ip;
 	TexturemapParams target_tp;
 	AntialiasParams target_ap;
-	RenderBuffer target_buffer;
 
-	RenderBuffer tex_target_buffer;
-	RenderBuffer tex_predict_buffer;
+	GLBuffer gl_predict;
+	GLBuffer gl_target;
+	GLBuffer texgl_target;
+	GLBuffer texgl_predict;
 
-	RenderingParams tex_p;
 	AdamParams tex_adam;
-	LossParams loss;
+	MSELossParams loss;
 
 public:
 	const int windowWidth = 2560;
@@ -122,5 +146,42 @@ public:
 	void init();
 	void display(void);
 	void update(void);
-	float getLoss() { return Loss::MSE(loss); };
+	float getLoss() { return MSELoss::loss(loss); };
 };
+
+
+// original sample code 
+
+class PresetMine {
+
+	Attribute pos;
+	Attribute texel;
+	Attribute normal;
+	Attribute proj;
+
+	Matrix mat;
+
+	RenderBufferGrad rast;
+	RenderBufferGrad intr;
+	RenderBufferGrad intr_norm;
+	RenderBufferGrad intr_pos;
+	RenderBufferGrad tex;
+	RenderBufferGrad aa;
+
+	TransformParams trans;
+	RasterizeParams rp;
+	InterpolateParams ip;
+	TexturemapParams tp;
+	AntialiasParams ap;
+
+	GLBuffer buffer;
+
+public:
+	const int windowWidth = 512;
+	const int windowHeight = 512;
+	void init();
+	void display(void);
+	void update(void);
+	float getLoss() { return 0.0; };
+};
+*/

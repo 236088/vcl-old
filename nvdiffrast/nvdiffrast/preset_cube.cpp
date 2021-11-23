@@ -1,20 +1,19 @@
 #include "preset.h"
 
-void PresetCube::Pass::init(RenderingParams& p, Attribute& pos, Attribute& color) {
-	Project::setRotation(pp, 0.0, 0.0, 1.0, 0.0);
-	Project::setView(pp, 3.0, 3.0, 2.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-	Project::setProjection(pp, 45, 1.0, 0.1, 10.0);
-	Project::init(pp, pos);
-	Rasterize::init(rp, p, pp, pos, 0);
-	Interpolate::init(ip, p, rp, color);
-	Antialias::init(ap, p, pos, pp, rp, ip.out, 3);
+/*
+void PresetCube::Pass::init(Attribute& proj, Attribute& color) {
+	RenderBuffer::init(rast, 512, 512, 4, 1);
+	RenderBuffer::init(intr, 512, 512, 3, 1);
+	RenderBuffer::init(aa, 512, 512, 3, 1);
+	Rasterize::init(rp, rast, proj);
+	Interpolate::init(ip, intr, rast,  color);
+	Antialias::init(ap, aa, proj, intr, rast);
 }
 
-void PresetCube::Pass::forward(RenderingParams& p) {
-	Project::forward(pp);
-	Rasterize::forward(rp, p);
-	Interpolate::forward(ip, p);
-	Antialias::forward(ap, p);
+void PresetCube::Pass::forward() {
+	Rasterize::forward(rp);
+	Interpolate::forward(ip);
+	Antialias::forward(ap);
 }
 
 
@@ -33,9 +32,9 @@ void PresetCube::init(int resolution) {
 		predict_pos_vbo[i] = target_pos.h_vbo[i] + r;
 		predict_color_vbo[i] = (float)rand() / (float)RAND_MAX;
 	}
-	attributeInit(target_color, target_color_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3, false);
-	attributeInit(predict_pos, predict_pos_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3, true);
-	attributeInit(predict_color, predict_color_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3, true);
+	attributeInit(target_color, target_color_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3);
+	attributeInit(predict_pos, predict_pos_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3);
+	attributeInit(predict_color, predict_color_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3);
 	cudaFree(target_color_vbo); cudaFree(predict_pos_vbo); cudaFree(predict_color_vbo);
 
 	target.init(p, target_pos, target_color);
@@ -97,3 +96,4 @@ void PresetCube::update(void) {
 	Project::addRotation(hr_predict.pp, 1.0, 0.0, 1.0, 0.0);
 	Project::addRotation(hr_target.pp, 1.0, 0.0, 1.0, 0.0);
 }
+*/

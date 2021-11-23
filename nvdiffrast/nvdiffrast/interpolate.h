@@ -1,35 +1,49 @@
 #pragma once
 
 #include "common.h"
-#include "rasterize.h"
+#include "buffer.h"
 
-struct InterpolateParams {
+struct InterpolateKernelParams {
+	int width;
+	int height;
+	int depth;
 	int enableDA;
-
 	float* rast;
 	float* rastDB;
 	float* attr;
 	unsigned int* idx;
-	int attrNum;
-	int idxNum;
 	int dimention;
 
 	float* out;
 	float* outDA;
-
-	float* dLdout;
-	float* dLdda;
-
-	float* gradAttr;
-	float* gradRast;
-	float* gradRastDB;
 };
+
+struct InterpolateKernelGradParams {
+	float* out;
+	float* outDA;
+
+	float* rast;
+	float* rastDB;
+	float* attr;
+};
+
+struct InterpolateParams {
+	dim3 block;
+	dim3 grid;
+	InterpolateKernelParams params;
+};
+
+struct InterpolateGradParams :InterpolateParams {
+	InterpolateKernelGradParams grad;
+};
+
 
 class Interpolate {
 public:
-	static void init(InterpolateParams& ip, RenderingParams& p, RasterizeParams& rp, Attribute& attr);
-	static void init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout, float* dLdda);
-	static void init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout);
-	static void forward(InterpolateParams& ip, RenderingParams& p);
-	static void backward(InterpolateParams& ip, RenderingParams& p);
+	static void init(InterpolateParams& p, RenderBuffer& intr, RenderBuffer& rast, Attribute& attr);
+	static void init(InterpolateParams& p, RenderBuffer& intr, RenderBuffer& intrDA, RenderBuffer& rast, RenderBuffer& rastDB, Attribute& attr);
+	static void init(InterpolateGradParams& p, RenderBufferGrad& intr, RenderBufferGrad& rast, AttributeGrad& attr);
+	static void init(InterpolateGradParams& p, RenderBufferGrad& intr, RenderBufferGrad& intrDA, RenderBufferGrad& rast, RenderBufferGrad& rastDB, AttributeGrad& attr);
+	static void forward(InterpolateParams& p);
+	static void backward(InterpolateGradParams& p);
 };

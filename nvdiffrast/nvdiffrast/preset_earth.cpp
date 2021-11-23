@@ -1,5 +1,6 @@
 #include "preset.h"
 
+/*
 void PresetEarth::init() {
 	Rendering::init(p, 512, 512, 1);
 	loadOBJ("../../sphere.obj", pos, texel, normal);
@@ -61,3 +62,4 @@ void PresetEarth::update(void) {
 	float z = (float)rand() / (float)RAND_MAX * 2.0 - 1.0;
 	Project::addRotation(pp, theta, x, y, z);
 }
+*/

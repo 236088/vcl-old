@@ -17,39 +17,12 @@
 #include <stdio.h>
 
 #define MAX_DIM_PER_BLOCK 32
+#define TEX_MAX_MIP_LEVEL 16
 
-
-struct Attribute {
-	float* vbo;
-	float* h_vbo;
-	unsigned int* vao;
-	unsigned int* h_vao;
-	int vboNum;
-	int vaoNum;
-	int dimention;
-	float* grad;
-};
-
-void attributeInit(Attribute& attr, float* h_vbo, unsigned int* h_vao, int vboNum, int vaoNum, int dimention, bool learn);
-void attributeGradReset(Attribute& attr);
-
-struct RenderingParams {
-	int width;
-	int height;
-	int depth;
-	dim3 grid;
-	dim3 block;
-};
-
-class Rendering {
-public:
-	static void init(RenderingParams& rp, int width, int height, int depth);
-};
-
-void loadOBJ(const char* path, Attribute& pos, Attribute& texel, Attribute& normal);
 
 dim3 getBlock(int width, int height);
-dim3 getGrid(dim3 block, int width, int height);
+dim3 getBlock(int width, int height, int channel);
+dim3 getGrid(dim3 block, int width, int height, int depth);
 
 void cudaErrorCheck(const char* id, cudaError_t status);
 

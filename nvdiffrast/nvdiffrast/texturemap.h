@@ -1,39 +1,48 @@
 #pragma once
 #include "common.h"
+#include "buffer.h"
 #include "rasterize.h"
 #include "interpolate.h"
 
-#define TEX_MAX_MIP_LEVEL 16
-#define addr(ptr, level, width, height, channel, idx) (ptr)
-struct TexturemapParams {
+struct TexturemapKernelParams {
 	int width;
 	int height;
+	int depth;
+	int texwidth;
+	int texheight;
 	int channel;
 	int miplevel;
-
-	dim3 grid;
-	dim3 block;
-
 	float* rast;
+
 	float* uv;
 	float* uvDA;
-	float* miptex[TEX_MAX_MIP_LEVEL];
+	float* texture[TEX_MAX_MIP_LEVEL];
 
 	float* out;
+};
 
-	float* dLdout;
+struct TexturemapKerneGradlParams {
+	float* uv;
+	float* uvDA;
+	float* texture[TEX_MAX_MIP_LEVEL];
 
-	float* gradUV;
-	float* gradUVDA;
-	float* gradMipTex[TEX_MAX_MIP_LEVEL];
+	float* out;
+};
+
+struct TexturemapParams {
+	dim3 grid;
+	dim3 block;
+	TexturemapKernelParams params;
+};
+
+struct TexturemapGradParams :TexturemapParams {
+	TexturemapKerneGradlParams grad;
 };
 
 class Texturemap {
 public:
-	static void init(TexturemapParams& tp, RenderingParams& p, RasterizeParams& rp, InterpolateParams& ip, int width, int height, int channel, int miplevel);
-	static void init(TexturemapParams& tp, RenderingParams& p, float* dLdout);
-	static void forward(TexturemapParams& tp, RenderingParams& p);
-	static void buildMipTexture(TexturemapParams& tp);
-	static void backward(TexturemapParams& tp, RenderingParams& p);
-	static void loadBMP(TexturemapParams& tp, const char* path);
+	static void init(TexturemapParams& p, RenderBuffer& tex, MipTexture& texture, RenderBuffer& intr, RenderBuffer& intrDA, RenderBuffer& rast);
+	static void init(TexturemapGradParams& p, RenderBufferGrad& tex, MipTextureGrad& texture, RenderBufferGrad& intr, RenderBufferGrad& intrDA, RenderBuffer& rast);
+	static void forward(TexturemapParams& p);
+	static void backward(TexturemapGradParams& p);
 };

@@ -4,10 +4,11 @@
     <CudaCompile Include="antialias.cu" />
     <CudaCompile Include="interpolate.cu" />
     <CudaCompile Include="optimize.cu" />
-    <CudaCompile Include="project.cu" />
+    <CudaCompile Include="transform.cu" />
     <CudaCompile Include="rasterize.cu" />
     <CudaCompile Include="texturemap.cu" />
     <CudaCompile Include="preset.cu" />
+    <CudaCompile Include="buffer.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="common.cpp" />
@@ -16,15 +17,19 @@
     <ClCompile Include="preset_cube.cpp" />
     <ClCompile Include="preset_earth.cpp" />
     <ClCompile Include="preset_primitives.cpp" />
+    <ClCompile Include="preset_mine.cpp" />
+    <ClCompile Include="matrix.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="antialias.h" />
     <ClInclude Include="common.h" />
     <ClInclude Include="interpolate.h" />
     <ClInclude Include="optimize.h" />
-    <ClInclude Include="project.h" />
+    <ClInclude Include="transform.h" />
     <ClInclude Include="rasterize.h" />
     <ClInclude Include="texturemap.h" />
     <ClInclude Include="preset.h" />
+    <ClInclude Include="matrix.h" />
+    <ClInclude Include="buffer.h" />
   </ItemGroup>
 </Project>

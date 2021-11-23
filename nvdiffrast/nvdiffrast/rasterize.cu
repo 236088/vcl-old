@@ -1,14 +1,18 @@
 #include "rasterize.h"
 
-void Rasterize::init(RasterizeParams& rp, RenderingParams& p, float* dLdout, float* dLddb) {
-    rp.dLdout = dLdout;
-    rp.dLddb = dLddb;
-    if (!rp.enableAA)cudaMalloc(&rp.gradPos, rp.posNum * 4 * sizeof(float));
+static void commonInit(RasterizeGradParams& p, RenderBufferGrad& rast, AttributeGrad& proj) {
+    p.grad.proj = proj.grad;
+    p.grad.out = rast.grad;
+}
+void Rasterize::init(RasterizeGradParams& p, RenderBufferGrad& rast, RenderBufferHost& host_rast, AttributeGrad& proj, AttributeHost& host_proj) {
+    init((RasterizeParams&)p, rast, host_rast, proj, host_proj);
+    commonInit(p, rast, proj);
 }
 
-void Rasterize::init(RasterizeParams& rp, RenderingParams& p, float* dLdout) {
-    rp.dLdout = dLdout;
-    if (!rp.enableAA)cudaMalloc(&rp.gradPos, rp.posNum * 4 * sizeof(float));
+void Rasterize::init(RasterizeGradParams& p, RenderBufferGrad& rast, RenderBufferHost& host_rast, RenderBufferGrad& rastDB, RenderBufferHost& host_rastDB, AttributeGrad& proj, AttributeHost& host_proj) {
+    init((RasterizeParams&)p, rast, host_rast, rastDB, host_rastDB, proj, host_proj);
+    commonInit(p, rast, proj);
+    p.grad.outDB = rastDB.grad;
 }
 
 // calculate d[u, v]/d[X, yc, wc]
@@ -83,20 +87,20 @@ void Rasterize::init(RasterizeParams& rp, RenderingParams& p, float* dLdout) {
 // dL/dw2 = 
 
 
-__global__ void RasterizeBackwardKernel(const RasterizeParams rp, const RenderingParams p) {
+__global__ void RasterizeBackwardKernel(const RasterizeKernelParams p, const RasterizeKernelGradParams g) {
     int px = blockIdx.x * blockDim.x + threadIdx.x;
     int py = blockIdx.y * blockDim.y + threadIdx.y;
     int pz = blockIdx.z;
     if (px >= p.width || py >= p.height || pz >= p.depth)return;
     int pidx = px + p.width * (py + p.height * pz);
 
-    float4 r = ((float4*)rp.out)[pidx];
+    float4 r = ((float4*)p.out)[pidx];
     int idx = (int)r.w - 1;
     if (idx < 0) return;
-    float2 dLdout = ((float2*)rp.dLdout)[pidx];
+    float2 dLdout = ((float2*)g.out)[pidx];
     int bitcheck = __float_as_int(dLdout.x) | __float_as_int(dLdout.y);
-    if (rp.enableDB) {
-        float4 dLddb = ((float4*)rp.dLddb)[pidx];
+    if (p.enableDB) {
+        float4 dLddb = ((float4*)g.outDB)[pidx];
     }
     if ((bitcheck << 1) == 0)return;
 
@@ -104,15 +108,15 @@ __global__ void RasterizeBackwardKernel(const RasterizeParams rp, const Renderin
         2.0 * (px + 0.5) / (float)p.width - 1.0,
         2.0 * (py + 0.5) / (float)p.height - 1.0
     );
-    unsigned int idx0 = rp.idx[idx * 3];
-    unsigned int idx1 = rp.idx[idx * 3 + 1];
-    unsigned int idx2 = rp.idx[idx * 3 + 2];
-    float2 p0 = ((float2*)rp.pos)[idx0 * 2];
-    float2 p1 = ((float2*)rp.pos)[idx1 * 2];
-    float2 p2 = ((float2*)rp.pos)[idx2 * 2];
-    float w0 = rp.pos[idx0 * 4 + 3];
-    float w1 = rp.pos[idx1 * 4 + 3];
-    float w2 = rp.pos[idx2 * 4 + 3];
+    unsigned int idx0 = p.idx[idx * 3];
+    unsigned int idx1 = p.idx[idx * 3 + 1];
+    unsigned int idx2 = p.idx[idx * 3 + 2];
+    float2 p0 = ((float2*)p.proj)[idx0 * 2];
+    float2 p1 = ((float2*)p.proj)[idx1 * 2];
+    float2 p2 = ((float2*)p.proj)[idx2 * 2];
+    float w0 = p.proj[idx0 * 4 + 3];
+    float w1 = p.proj[idx1 * 4 + 3];
+    float w2 = p.proj[idx2 * 4 + 3];
     p0 = w0 * pix - p0;
     p1 = w1 * pix - p1;
     p2 = w2 * pix - p2;
@@ -135,17 +139,16 @@ __global__ void RasterizeBackwardKernel(const RasterizeParams rp, const Renderin
     float gy2 = ((dLdout.y * p0.x - dLdout.x * p1.x) - kuv * (p0.x - p1.x)) * ia;
     float gw2 = -gx2 * pix.x - gy2 * pix.y;
 
-    if (rp.enableDB) {
+    if (p.enableDB) {
 
     }
 
-    atomicAdd_xyw(rp.gradPos + idx0 * 4, gx0, gy0, gw0);
-    atomicAdd_xyw(rp.gradPos + idx1 * 4, gx1, gy1, gw1);
-    atomicAdd_xyw(rp.gradPos + idx2 * 4, gx2, gy2, gw2);
+    atomicAdd_xyw(g.proj + idx0 * 4, gx0, gy0, gw0);
+    atomicAdd_xyw(g.proj + idx1 * 4, gx1, gy1, gw1);
+    atomicAdd_xyw(g.proj + idx2 * 4, gx2, gy2, gw2);
 }
 
-void Rasterize::backward(RasterizeParams& rp, RenderingParams& p) {
-    if (!rp.enableAA) cudaMemset(rp.gradPos, 0, rp.posNum * 4 * sizeof(float));
-    void* args[] = { &rp, &p };
+void Rasterize::backward(RasterizeGradParams& p) {
+    void* args[] = { &p.params, &p.grad };
     cudaLaunchKernel(RasterizeBackwardKernel, p.grid, p.block, args, 0, NULL);
 }
