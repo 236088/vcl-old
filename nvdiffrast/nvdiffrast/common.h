@@ -28,10 +28,11 @@ struct Attribute {
 	int vaoNum;
 	int dimention;
 	float* grad;
+	static void init(Attribute& attr, float* h_vbo, unsigned int* h_vao, int vboNum, int vaoNum, int dimention, bool learn);
+	static void gradClear(Attribute& attr);
+	static void loadOBJ(const char* path, Attribute& pos, Attribute& texel, Attribute& normal);
 };
 
-void attributeInit(Attribute& attr, float* h_vbo, unsigned int* h_vao, int vboNum, int vaoNum, int dimention, bool learn);
-void attributeGradReset(Attribute& attr);
 
 struct RenderingParams {
 	int width;
@@ -46,7 +47,6 @@ public:
 	static void init(RenderingParams& rp, int width, int height, int depth);
 };
 
-void loadOBJ(const char* path, Attribute& pos, Attribute& texel, Attribute& normal);
 
 dim3 getBlock(int width, int height);
 dim3 getGrid(dim3 block, int width, int height);

@@ -5,7 +5,7 @@ void PresetPrimitives::init() {
 	Matrix::setFovy(mat, 45);
 	Matrix::setEye(mat, 2.5, 2.5, 2.5);
 	Rendering::init(p, 512, 512, 1);
-	loadOBJ("../../monkey.obj", pos, texel, normal);
+	Attribute::loadOBJ("../../monkey.obj", pos, texel, normal);
 	Project::init(pp, mat.mvp, pos);
 	Rasterize::init(rp, p, pp, pos, 1);
 	Interpolate::init(ip, p, rp, texel);

@@ -7,7 +7,6 @@ void Project::init(ProjectParams& pp, float* mat, Attribute& pos) {
 	pp.pos = pos.vbo; 
 	pp.mat = mat;
 	cudaMallocHost(&pp.host_out, pos.vboNum * 4 * sizeof(float));
-
 	cudaMalloc(&pp.out, pos.vboNum * 4 * sizeof(float));
 }
 

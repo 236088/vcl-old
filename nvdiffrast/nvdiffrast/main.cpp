@@ -2,12 +2,12 @@
 #include <ctime>
 
 //PresetEarth preset;
-//PresetCube preset;
-PresetPrimitives preset;
+PresetCube preset;
+//PresetPrimitives preset;
 
 static void InitFunc()
 {
-	preset.init();
+	preset.init(4);
 }
 
 float loss_sum = 0;

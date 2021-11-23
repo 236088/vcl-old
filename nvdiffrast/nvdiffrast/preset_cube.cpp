@@ -14,6 +14,22 @@ void PresetCube::Pass::forward(RenderingParams& p) {
 	Antialias::forward(ap, p);
 }
 
+void PresetCube::Randomize() {
+	float* target_color_vbo, * predict_pos_vbo, * predict_color_vbo;
+	cudaMallocHost(&target_color_vbo, target_pos.vboNum * 3 * sizeof(float));
+	cudaMallocHost(&predict_pos_vbo, target_pos.vboNum * 3 * sizeof(float));
+	cudaMallocHost(&predict_color_vbo, target_pos.vboNum * 3 * sizeof(float));
+	for (int i = 0; i < target_pos.vboNum * 3; i++) {
+		target_color_vbo[i] = (target_pos.h_vbo[i] + 1.0) / 2.0;
+		float r = -(float)rand() / (float)RAND_MAX + 0.5;
+		predict_pos_vbo[i] = target_pos.h_vbo[i] + r;
+		predict_color_vbo[i] = (float)rand() / (float)RAND_MAX;
+	}
+	Attribute::init(target_color, target_color_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3, false);
+	Attribute::init(predict_pos, predict_pos_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3, true);
+	Attribute::init(predict_color, predict_color_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3, true);
+	cudaFree(target_color_vbo); cudaFree(predict_pos_vbo); cudaFree(predict_color_vbo);
+}
 
 void PresetCube::init(int resolution) {
 	Matrix::init(mat);
@@ -24,22 +40,8 @@ void PresetCube::init(int resolution) {
 	Matrix::setEye(hr_mat, 3.0, 3.0, 2.0);
 	Rendering::init(p, resolution, resolution, 1);
 	Rendering::init(hr_p, 512, 512, 1);
-	loadOBJ("../../cube.obj", target_pos, texel, normal);
-
-	float* target_color_vbo, * predict_pos_vbo, * predict_color_vbo;
-	cudaMallocHost(&target_color_vbo, target_pos.vboNum * 3 * sizeof(float));
-	cudaMallocHost(&predict_pos_vbo, target_pos.vboNum * 3 * sizeof(float));
-	cudaMallocHost(&predict_color_vbo, target_pos.vboNum * 3 * sizeof(float));
-	for (int i = 0; i < target_pos.vboNum * 3; i++) {
-		target_color_vbo[i] = (target_pos.h_vbo[i] + 1.0) / 2.0;
-		float r = (float)rand() / (float)RAND_MAX - 0.5;
-		predict_pos_vbo[i] = target_pos.h_vbo[i] + r;
-		predict_color_vbo[i] = (float)rand() / (float)RAND_MAX;
-	}
-	attributeInit(target_color, target_color_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3, false);
-	attributeInit(predict_pos, predict_pos_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3, true);
-	attributeInit(predict_color, predict_color_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3, true);
-	cudaFree(target_color_vbo); cudaFree(predict_pos_vbo); cudaFree(predict_color_vbo);
+	Attribute::loadOBJ("../../cube.obj", target_pos, texel, normal);
+	Randomize();
 
 	target.init(p, mat, target_pos, target_color);
 	predict.init(p, mat, predict_pos, predict_color);
@@ -67,8 +69,8 @@ void PresetCube::display(void) {
 	predict.forward(p);
 
 	Loss::backward(loss);
-	attributeGradReset(predict_pos);
-	attributeGradReset(predict_color);
+	Attribute::gradClear(predict_pos);
+	Attribute::gradClear(predict_color);
 	Antialias::backward(predict.ap, p);
 	Interpolate::backward(predict.ip, p);
 	Rasterize::backward(predict.rp, p);

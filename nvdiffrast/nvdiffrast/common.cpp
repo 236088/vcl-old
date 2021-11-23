@@ -8,7 +8,7 @@ void Rendering::init(RenderingParams& rp, int width, int height, int depth) {
     rp.grid = getGrid(rp.block, width, height);
 }
 
-void attributeInit(Attribute& attr, float* h_vbo, unsigned int* h_vao, int vboNum, int vaoNum, int dimention, bool learn) {
+void Attribute::init(Attribute& attr, float* h_vbo, unsigned int* h_vao, int vboNum, int vaoNum, int dimention, bool learn) {
     attr.dimention = dimention;
     attr.vboNum = vboNum;
     attr.vaoNum = vaoNum;
@@ -23,11 +23,11 @@ void attributeInit(Attribute& attr, float* h_vbo, unsigned int* h_vao, int vboNu
     if (learn)cudaMalloc(&attr.grad, vboNum * dimention * sizeof(float));
 }
 
-void attributeGradReset(Attribute& attr) {
+void Attribute::gradClear(Attribute& attr) {
     cudaMemset(attr.grad, 0, attr.vboNum * attr.dimention * sizeof(float));
 }
 
-void loadOBJ(const char* path, Attribute& pos, Attribute& texel, Attribute& normal) {
+void Attribute::loadOBJ(const char* path, Attribute& pos, Attribute& texel, Attribute& normal) {
     FILE* file = fopen(path, "r");
     if (file == NULL) {
         printf("Impossible to open the file !\n");
@@ -36,6 +36,7 @@ void loadOBJ(const char* path, Attribute& pos, Attribute& texel, Attribute& norm
 
     std::vector<float> tempPos, tempTexel, tempNorm;
     std::vector<unsigned int> tempPosIndex, tempTexelIndex, tempNormIndex;
+    int posNum = 0, texelNum = 0, normNum = 0, indexNum = 0;
     while (1) {
         char lineHeader[128];
         int res = fscanf(file, "%s", lineHeader);
@@ -47,12 +48,14 @@ void loadOBJ(const char* path, Attribute& pos, Attribute& texel, Attribute& norm
             tempPos.push_back(v[0]);
             tempPos.push_back(v[1]);
             tempPos.push_back(v[2]);
+            posNum++;
         }
         else if (strcmp(lineHeader, "vt") == 0) {
             float v[2];
             fscanf(file, "%f %f\n", &v[0], &v[1]);
             tempTexel.push_back(v[0]);
             tempTexel.push_back(v[1]);
+            texelNum++;
         }
         else if (strcmp(lineHeader, "vn") == 0) {
             float v[3];
@@ -60,29 +63,61 @@ void loadOBJ(const char* path, Attribute& pos, Attribute& texel, Attribute& norm
             tempNorm.push_back(v[0]);
             tempNorm.push_back(v[1]);
             tempNorm.push_back(v[2]);
+            normNum++;
         }
-        else if (strcmp(lineHeader, "f") == 0) {
+        else if (strcmp(lineHeader, "f") == 0 && posNum > 0) {
             unsigned int idx[9];
-            int matches = fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%d\n", &idx[0], &idx[1], &idx[2], &idx[3], &idx[4], &idx[5], &idx[6], &idx[7], &idx[8]);
-            if (matches != 9) {
-                printf("File can't be read by our simple parser : ( Try exporting with other options\n");
-                return;
+            if (texelNum > 0 && normNum > 0) {
+                int matches = fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%d\n", &idx[0], &idx[3], &idx[6], &idx[1], &idx[4], &idx[7], &idx[2], &idx[5], &idx[8]);
+                if (matches != 9) {
+                    printf("File can't be read by our simple parser : ( Try exporting with other options\n");
+                    return;
+                }
+                tempTexelIndex.push_back(idx[3] - 1);
+                tempTexelIndex.push_back(idx[4] - 1);
+                tempTexelIndex.push_back(idx[5] - 1);
+                tempNormIndex.push_back(idx[6] - 1);
+                tempNormIndex.push_back(idx[7] - 1);
+                tempNormIndex.push_back(idx[8] - 1);
+            }
+            else if (texelNum > 0) {
+                int matches = fscanf(file, "%d/%d %d/%d %d/%d\n", &idx[0], &idx[3], &idx[1], &idx[4], &idx[2], &idx[5]);
+                if (matches != 6) {
+                    printf("File can't be read by our simple parser : ( Try exporting with other options\n");
+                    return;
+                }
+                tempTexelIndex.push_back(idx[3] - 1);
+                tempTexelIndex.push_back(idx[4] - 1);
+                tempTexelIndex.push_back(idx[5] - 1);
+            }
+            else if (normNum > 0) {
+                int matches = fscanf(file, "%d//%d %d//%d %d//%d\n", &idx[0], &idx[6], &idx[1], &idx[7], &idx[2], &idx[8]);
+                if (matches != 6) {
+                    printf("File can't be read by our simple parser : ( Try exporting with other options\n");
+                    return;
+                }
+                tempNormIndex.push_back(idx[6] - 1);
+                tempNormIndex.push_back(idx[7] - 1);
+                tempNormIndex.push_back(idx[8] - 1);
+            }
+            else {
+                int matches = fscanf(file, "%d %d %d\n", &idx[0], &idx[1], &idx[2]);
+                if (matches != 3) {
+                    printf("File can't be read by our simple parser : ( Try exporting with other options\n");
+                    return;
+                }
             }
             tempPosIndex.push_back(idx[0] - 1);
-            tempPosIndex.push_back(idx[3] - 1);
-            tempPosIndex.push_back(idx[6] - 1);
-            tempTexelIndex.push_back(idx[1] - 1);
-            tempTexelIndex.push_back(idx[4] - 1);
-            tempTexelIndex.push_back(idx[7] - 1);
-            tempNormIndex.push_back(idx[2] - 1);
-            tempNormIndex.push_back(idx[5] - 1);
-            tempNormIndex.push_back(idx[8] - 1);
+            tempPosIndex.push_back(idx[1] - 1);
+            tempPosIndex.push_back(idx[2] - 1);
+            indexNum++;
         }
     }
 
-    if (&pos != nullptr)  attributeInit(pos, tempPos.data(), tempPosIndex.data(), tempPos.size() / 3, tempPosIndex.size() / 3, 3, false);
-    if (&texel != nullptr)  attributeInit(texel, tempTexel.data(), tempTexelIndex.data(), tempTexel.size() / 2, tempTexelIndex.size() / 3, 2, false);
-    if (&normal != nullptr)  attributeInit(normal, tempNorm.data(), tempNormIndex.data(), tempNorm.size() / 3, tempNormIndex.size() / 3, 3, false);
+
+    if (posNum > 0)  Attribute::init(pos, tempPos.data(), tempPosIndex.data(), posNum, indexNum, 3, false);
+    if (texelNum > 0)  Attribute::init(texel, tempTexel.data(), tempTexelIndex.data(), texelNum, indexNum, 2, false);
+    if (normNum > 0)  Attribute::init(normal, tempNorm.data(), tempNormIndex.data(), normNum, indexNum, 3, false);
 }
 
 dim3 getBlock(int width, int height) {

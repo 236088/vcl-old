@@ -81,7 +81,7 @@ class PresetCube {
 	AdamParams color_adam;
 	LossParams loss;
 
-
+	void Randomize();
 public:
 	const int windowWidth = 1024;
 	const int windowHeight = 1024;
