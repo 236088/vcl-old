@@ -165,14 +165,14 @@ void Antialias::forward(AntialiasParams& ap, RenderingParams& p) {
 //
 
 __device__ __forceinline__ void backwardEdgeLeak(const AntialiasParams ap, int pidx, int oidx, float2 pa, float2 pb, int idxa, int idxb, float iwa, float iwb, float2 o) {
-    float p = cross(pa, pb);
-    if (p * cross(pa - o, pb - o) > 0) return;
+    float a = cross(pa, pb);
+    if (a * cross(pa - o, pb - o) > 0) return;
     float2 e = pa - pb;
     float n = (o.x + o.y) * (o.x - o.y);
     if ((e.x + e.y) * (e.x - e.y) * n > 0)return;
     float D = cross(e, o);
     float ia = 1.0 / (D + (D > 0 ? 1e-3 : -1e-3));
-    float alpha = p * ia - 0.5;
+    float alpha = a * ia - 0.5;
     float d = 0.0;
     for (int i = 0; i < ap.channel; i++) {
         float dLdout = alpha > 0 ? ap.dLdout[oidx * ap.channel + i] : ap.dLdout[pidx * ap.channel + i];

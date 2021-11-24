@@ -30,17 +30,19 @@ int msb(int v)
 }
 
 float Loss::MSE(LossParams& loss) {
-	square << <loss.grid, loss.block >> > (loss);
+	void* sargs[] = { &loss };
+	cudaLaunchKernel(square, loss.grid, loss.block, sargs, 0, NULL);
 	int b = msb(loss.size);
 	int stride = 1 << (b - 1);
 	int w = 1 << (b / 2), h = 1 << (b - 1 - b / 2);
-	while (stride>0)
+	void* args[] = { &loss, &w, &h, &stride };
+	while (stride > 0)
 	{
 		dim3 block = getBlock(w, h);
 		dim3 grid = getGrid(block, w, h);
-		reduction << <grid, block >> > (loss, w, h, stride);
+		cudaLaunchKernel(reduction, grid, block, args, 0, NULL);
 		stride >>= 1;
-		if (h>=w)h >>= 1;
+		if (h >= w)h >>= 1;
 		else w >>= 1;
 	}
 	float sum;

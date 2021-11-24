@@ -108,9 +108,6 @@ class PresetEarth {
 	AntialiasParams predict_ap;
 	RenderBuffer predict_buffer;
 
-	ProjectParams target_pp;
-	RasterizeParams target_rp;
-	InterpolateParams target_ip;
 	TexturemapParams target_tp;
 	AntialiasParams target_ap;
 	RenderBuffer target_buffer;

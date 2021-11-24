@@ -159,7 +159,6 @@ void Rasterize::init(RasterizeParams& rp, RenderingParams& p, ProjectParams& pp,
 			STRING(
 			in vec4 var_uvzw;
 			in vec4 var_db;
-			in int gl_PrimitiveID;
 			layout(location = 0) out vec4 out_raster;
 			layout(location = 1) out vec4 out_db;
 			void main() {
@@ -186,7 +185,6 @@ void Rasterize::init(RasterizeParams& rp, RenderingParams& p, ProjectParams& pp,
 			"#version 430\n"
 			STRING(
 			in vec4 var_uvzw;
-			in int gl_PrimitiveID;
 			layout(location = 0) out vec4 out_raster;
 			void main() {
 				out_raster = vec4(var_uvzw.x, var_uvzw.y, var_uvzw.z / var_uvzw.w, float(gl_PrimitiveID + 1));

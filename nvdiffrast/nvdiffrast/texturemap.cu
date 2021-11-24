@@ -293,7 +293,7 @@ __global__ void TexturemapBackwardKernel(const TexturemapParams tp, const Render
 
 	for (int i = 0; i < tp.channel; i++) {
 		float dLdout = tp.dLdout[pidx * tp.channel + i];
-		float check = atomicAdd(&tp.gradMipTex[level0][idx0.x * tp.channel + i], (1.0 - flevel) * (1.0 - uv0.x) * (1.0 - uv0.y) * dLdout);
+		atomicAdd(&tp.gradMipTex[level0][idx0.x * tp.channel + i], (1.0 - flevel) * (1.0 - uv0.x) * (1.0 - uv0.y) * dLdout);
 		atomicAdd(&tp.gradMipTex[level0][idx0.y * tp.channel + i], (1.0 - flevel) * uv0.x * (1.0 - uv0.y) * dLdout);
 		atomicAdd(&tp.gradMipTex[level0][idx0.z * tp.channel + i], (1.0 - flevel) * (1.0 - uv0.x) * uv0.y * dLdout);
 		atomicAdd(&tp.gradMipTex[level0][idx0.w * tp.channel + i], (1.0 - flevel) * uv0.x * uv0.y * dLdout);

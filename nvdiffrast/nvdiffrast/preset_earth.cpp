@@ -17,7 +17,7 @@ void PresetEarth::init() {
 	Antialias::init(predict_ap, p, pos, pp, rp, predict_tp.out, 3);
 	Loss::init(loss, predict_ap.out, target_ap.out, p, 3);
 	Antialias::init(predict_ap, p, rp, loss.grad);
-	Texturemap::init(predict_tp, p, predict_ap.dLdout);
+	Texturemap::init(predict_tp, p, predict_ap.gradIn);
 	Adam::init(tex_adam, predict_tp.miptex[0], predict_tp.gradMipTex[0], 2048 * 1536 * 3, 2048, 1536, 3, 0.9, 0.999, 1e-3, 1e-8);
 
 	Rendering::init(tex_p, 2048, 512, 1);
