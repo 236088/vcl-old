@@ -4,12 +4,6 @@
 struct ProjectParams{
 	dim3 block;
 	dim3 grid;
-	glm::vec3 eye;
-	glm::vec3 origin;
-	glm::vec3 up;
-	glm::mat4 transform;
-	glm::mat4 view;
-	glm::mat4 projection;
 
 	int size;
 	float* pos;

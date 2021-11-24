@@ -6,6 +6,7 @@
 #include "rasterize.h"
 #include "interpolate.h"
 #include "texturemap.h"
+#include "material.h"
 #include "antialias.h"
 
 struct RenderBuffer {
@@ -98,7 +99,6 @@ class PresetEarth {
 	Attribute texel;
 	Attribute normal;
 
-
 	RenderingParams p;
 
 	ProjectParams pp;
@@ -126,4 +126,37 @@ public:
 	void display(void);
 	void update(void);
 	float getLoss() { return Loss::MSE(loss); };
+};
+
+// orginal preset 
+
+class PresetMaterial {
+	Matrix mat;
+
+	Attribute pos;
+	Attribute texel;
+	Attribute normal;
+
+	RenderingParams p;
+
+	ProjectParams pp;
+	ProjectParams norm_pp;
+	ProjectParams pos_pp;
+	RasterizeParams rp;
+	InterpolateParams ip;
+	InterpolateParams norm_ip;
+	InterpolateParams pos_ip;
+	TexturemapParams tp;
+	MaterialParams mp;
+	AntialiasParams ap;
+	RenderBuffer buffer;
+
+
+public:
+	const int windowWidth = 512;
+	const int windowHeight = 512;
+	void init();
+	void display(void);
+	void update(void);
+	float getLoss() { return 0.0; };
 };

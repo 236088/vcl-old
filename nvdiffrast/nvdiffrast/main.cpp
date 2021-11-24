@@ -1,7 +1,8 @@
 #include "preset.h"
 #include <ctime>
 
-PresetEarth preset;
+PresetMaterial preset;
+//PresetEarth preset;
 //PresetCube preset;
 //PresetPrimitives preset;
 

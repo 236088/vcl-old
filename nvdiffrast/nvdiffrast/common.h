@@ -104,6 +104,7 @@ static __device__ __forceinline__ float4    operator-   (float a, const float4& 
 static __device__ __forceinline__ float dot(float2 a, float2 b) { return a.x * b.x + a.y * b.y; }
 static __device__ __forceinline__ float dot(float3 a, float3 b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 static __device__ __forceinline__ float dot(float4 a, float4 b) { return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w; }
+static __device__ __forceinline__ float clamp(float a, float min, float max) { return a<min ? min : a>max ? max : a; };
 static __device__ __forceinline__ void swap(int& a, int& b) { int t = a; a = b; b = t; }
 static __device__ __forceinline__ void swap(float& a, float& b) { float t = a; a = b; b = t; }
 static __device__ __forceinline__ void swap(float2& a, float2& b) { float2 t = a; a = b; b = t; }

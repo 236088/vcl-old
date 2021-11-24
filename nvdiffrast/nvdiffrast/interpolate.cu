@@ -17,6 +17,23 @@ void Interpolate::init(InterpolateParams& ip, RenderingParams& p, RasterizeParam
     }
 }
 
+void Interpolate::init(InterpolateParams& ip, RenderingParams& p, RasterizeParams& rp, Attribute& attr, ProjectParams& pp) {
+    ip.enableDA = rp.enableDB;
+    ip.rast = rp.out;
+    ip.attrNum = attr.vboNum;
+    ip.idxNum = attr.vaoNum;
+    ip.dimention = 4;
+    ip.attr = pp.out;
+    ip.idx = attr.vao;
+
+    cudaMalloc(&ip.out, p.width * p.height * 4 * sizeof(float));
+
+    if (ip.enableDA) {
+        ip.rastDB = rp.outDB;
+        cudaMalloc(&ip.outDA, p.width * p.height * 4 * 2 * sizeof(float));
+    }
+}
+
 __global__ void InterplateForwardKernel(const InterpolateParams ip, const RenderingParams p) {
     int px = blockIdx.x * blockDim.x + threadIdx.x;
     int py = blockIdx.y * blockDim.y + threadIdx.y;
@@ -42,7 +59,7 @@ __global__ void InterplateForwardKernel(const InterpolateParams ip, const Render
             float dadv = a1 - a2;
             float4 db = ((float4*)ip.rastDB)[pidx];
 
-            ((float2*)ip.outDA)[(pidx * ip.dimention + i)] =
+            ((float2*)ip.outDA)[pidx * ip.dimention + i] =
                 make_float2(dadu * db.x + dadv * db.z, dadu * db.y + dadv * db.w);
         }
     }

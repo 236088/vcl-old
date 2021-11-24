@@ -54,7 +54,9 @@ __global__ void AntialiasForwardKernel(const AntialiasParams ap, const Rendering
     int pz = blockIdx.z;
     if (px >= p.width || py >= p.height || pz >= p.depth)return;
     int pidx = px + p.width * (py + p.height * pz);
-
+    for (int i = 0; i < ap.channel; i++) {
+        ap.out[pidx * ap.channel + i] = ap.in[pidx * ap.channel + i];
+    }
     float2 tri = ((float2*)ap.rast)[pidx * 2 + 1];
     float2 trih = px > 0 ? ((float2*)ap.rast)[(pidx - 1) * 2 + 1] : tri;
     float2 triv = py > 0 ? ((float2*)ap.rast)[(pidx - p.width) * 2 + 1] : tri;
@@ -95,7 +97,7 @@ void Antialias::init(AntialiasParams& ap, RenderingParams& p, Attribute& pos, Pr
 }
 
 void Antialias::forward(AntialiasParams& ap, RenderingParams& p) {
-    cudaMemcpy(ap.out, ap.in, p.width * p.height * ap.channel * sizeof(float), cudaMemcpyDeviceToDevice);
+    cudaMemset(ap.out, 0, p.width * p.height * ap.channel * sizeof(float));
     void* args[] = { &ap,&p };
     cudaLaunchKernel(AntialiasForwardKernel, p.grid, p.block, args, 0, NULL);
 }
