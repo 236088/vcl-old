@@ -3,7 +3,7 @@
 void PresetPrimitives::init() {
 	Matrix::init(mat);
 	Matrix::setFovy(mat, 45);
-	Matrix::setEye(mat, 2.5, 2.5, 2.5);
+	Matrix::setEye(mat, 2.5f, 2.5f, 2.5f);
 	Rendering::init(p, 512, 512, 1);
 	Attribute::loadOBJ("../../monkey.obj", pos, texel, normal);
 	Project::init(pp, mat.mvp, pos);
@@ -33,13 +33,13 @@ void PresetPrimitives::display(void) {
 
 	glViewport(0, 0, windowWidth, windowHeight);
 	glEnable(GL_TEXTURE_2D);
-	drawBuffer(rp_buffer, p, rp.out, 4, GL_RG32F, GL_RGBA, -1.0, 0.0, 0.0, 1.0);
-	drawBuffer(ip_buffer, p, ip.out, 2, GL_RG32F, GL_RG, 0.0, 1.0, 0.0, 1.0);
-	drawBuffer(tp_buffer, p, tp.out, 3, GL_RGB32F, GL_BGR, -1.0, 0.0, -1.0, 0.0);
-	drawBuffer(ap_buffer, p, ap.out, 3, GL_RGB32F, GL_BGR, 0.0, 1.0, -1.0, 0.0);
+	drawBuffer(rp_buffer, p, rp.out, 4, GL_RG32F, GL_RGBA, -1.f, 0.f, 0.f, 1.f);
+	drawBuffer(ip_buffer, p, ip.out, 2, GL_RG32F, GL_RG, 0.f, 1.f, 0.f, 1.f);
+	drawBuffer(tp_buffer, p, tp.out, 3, GL_RGB32F, GL_RGB, -1.f, 0.f, -1.f, 0.f);
+	drawBuffer(ap_buffer, p, ap.out, 3, GL_RGB32F, GL_RGB, 0.f, 1.f, -1.f, 0.f);
 	glFlush();
 }
 
 void PresetPrimitives::update(void) {
-	Matrix::addRotation(mat, 1.0, 0.0, 1.0, 0.0);
+	Matrix::addRotation(mat, 1.f, 0.f, 1.f, 0.f);
 }

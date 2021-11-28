@@ -101,8 +101,8 @@ __global__ void RasterizeBackwardKernel(const RasterizeParams rp, const Renderin
     if ((bitcheck << 1) == 0)return;
 
     float2 pix = make_float2(
-        2.0 * (px + 0.5) / (float)p.width - 1.0,
-        2.0 * (py + 0.5) / (float)p.height - 1.0
+        2.f * (px + 0.5) / (float)p.width - 1.f,
+        2.f * (py + 0.5) / (float)p.height - 1.f
     );
     unsigned int idx0 = rp.idx[idx * 3];
     unsigned int idx1 = rp.idx[idx * 3 + 1];
@@ -120,9 +120,8 @@ __global__ void RasterizeBackwardKernel(const RasterizeParams rp, const Renderin
     float2 e1 = p1 - p2;
     float a = cross(e0, e1);
 
-    float eps = 1e-6f;
-    float ia = (abs(a) >= eps) ? a : (a < 0.f) ? -eps : eps;
-    ia = 1.0 / ia;
+    float eps = a > 0 ? 1e-6f : -1e-6f;
+    float ia = 1.f / (a + eps);
     float kuv = r.x * dLdout.x + r.y * dLdout.y;
 
     float gx0 = (dLdout.y * p2.y + kuv * e1.y) * ia;

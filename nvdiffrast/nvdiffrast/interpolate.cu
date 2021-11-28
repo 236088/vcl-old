@@ -77,14 +77,14 @@ void Interpolate::forward(InterpolateParams& ip, RenderingParams& p) {
 void Interpolate::init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout, float* dLdda) {
     ip.dLdout = dLdout;
     ip.dLdda = dLdda;
-    ip.gradAttr = attr.grad;
+    cudaMalloc(&ip.gradAttr, ip.attrNum * ip.dimention * sizeof(float));
     cudaMalloc(&ip.gradRast, p.width * p.height * 4 * sizeof(float));
     cudaMalloc(&ip.gradRastDB, p.width * p.height * 4 * sizeof(float));
 }
 
 void Interpolate::init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout) {
     ip.dLdout = dLdout;
-    ip.gradAttr = attr.grad;
+    cudaMalloc(&ip.gradAttr, ip.attrNum * ip.dimention * sizeof(float));
     cudaMalloc(&ip.gradRast, p.width * p.height * 4 * sizeof(float));
 }
 
@@ -141,6 +141,7 @@ __global__ void InterpolateBackwardKernel(const InterpolateParams ip, const Rend
 }
 
 void Interpolate::backward(InterpolateParams& ip, RenderingParams& p) {
+    cudaMemset(ip.gradAttr, 0, ip.attrNum * ip.dimention * sizeof(float));
     void* args[] = { &ip, &p };
     cudaLaunchKernel(InterpolateBackwardKernel, p.grid, p.block, args, 0, NULL);
 }

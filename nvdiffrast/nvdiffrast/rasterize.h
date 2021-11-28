@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "buffer.h"
 #include "project.h"
 
 struct RasterizeParams {

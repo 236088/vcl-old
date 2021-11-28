@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "buffer.h"
 #include "matrix.h"
 #include "optimize.h"
 #include "project.h"
@@ -8,6 +9,8 @@
 #include "texturemap.h"
 #include "material.h"
 #include "antialias.h"
+#include "filter.h"
+#include "nn.h"
 
 struct RenderBuffer {
 	GLuint buffer;
@@ -67,6 +70,10 @@ class PresetCube {
 
 	RenderingParams p;
 	Pass predict;
+	AdamParams pos_adam;
+	AdamParams color_adam;
+	LossParams loss;
+
 	Pass target;
 
 	RenderingParams hr_p;
@@ -78,9 +85,6 @@ class PresetCube {
 	RenderBuffer hr_target_buffer;
 	RenderBuffer hr_predict_buffer;
 
-	AdamParams pos_adam;
-	AdamParams color_adam;
-	LossParams loss;
 
 	void Randomize();
 public:
@@ -150,13 +154,105 @@ class PresetMaterial {
 	MaterialParams mp;
 	AntialiasParams ap;
 	RenderBuffer buffer;
+	MaterialParams target_mp;
+	AntialiasParams target_ap;
+	RenderBuffer target_buffer;
 
-
+	AdamParams adam;
+	LossParams loss;
 public:
-	const int windowWidth = 512;
+	const int windowWidth = 1024;
 	const int windowHeight = 512;
 	void init();
 	void display(void);
 	void update(void);
-	float getLoss() { return 0.0; };
+	float getLoss() { return Loss::MSE(loss); };
+};
+
+class PresetFilter {
+	Matrix mat;
+	Matrix hr_mat;
+
+	struct Pass {
+		ProjectParams pp;
+		RasterizeParams rp;
+		InterpolateParams ip;
+		AntialiasParams ap;
+		void init(RenderingParams& p, Matrix& mat, Attribute& pos, Attribute& color);
+		void forward(RenderingParams& p);
+	};
+
+	Attribute predict_pos;
+	Attribute predict_color;
+	Attribute target_pos;
+	Attribute target_color;
+	Attribute texel;
+	Attribute normal;
+
+	RenderingParams p;
+	Pass predict;
+	FilterParams predict_fp;
+	Pass target;
+	FilterParams target_fp;
+
+	RenderingParams hr_p;
+	Pass hr_target;
+	Pass hr_predict;
+
+	RenderBuffer predict_buffer;
+	RenderBuffer target_buffer;
+	RenderBuffer hr_target_buffer;
+	RenderBuffer hr_predict_buffer;
+
+	AdamParams pos_adam;
+	AdamParams color_adam;
+	LossParams loss;
+
+	void Randomize();
+public:
+	const int windowWidth = 1024;
+	const int windowHeight = 1024;
+	void init(int resolution, int count);
+	void display(void);
+	void update(void);
+	float getLoss() { return Loss::MSE(loss); };
+};
+
+class PresetNNEarth {
+	Matrix mat;
+
+	Attribute pos;
+	Attribute texel;
+	Attribute normal;
+	Attribute params;
+
+	RenderingParams p;
+
+	ProjectParams pp;
+	RasterizeParams rp;
+	InterpolateParams ip;
+	LayerParams lp0;
+	LayerParams lp1;
+	LayerParams lp2;
+	AntialiasParams ap;
+	RenderBuffer predict_buffer;
+
+	InterpolateParams target_ip;
+	TexturemapParams target_tp;
+	AntialiasParams target_ap;
+	RenderBuffer target_buffer;
+
+	AdamParams params_adam;
+	AdamParams adam0;
+	AdamParams adam1;
+	AdamParams adam2;
+	LossParams loss;
+
+public:
+	const int windowWidth = 1024;
+	const int windowHeight = 512;
+	void init();
+	void display(void);
+	void update(void);
+	float getLoss() { return Loss::MSE(loss); };
 };

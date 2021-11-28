@@ -9,6 +9,9 @@
     <CudaCompile Include="texturemap.cu" />
     <CudaCompile Include="preset.cu" />
     <CudaCompile Include="material.cu" />
+    <CudaCompile Include="filter.cu" />
+    <CudaCompile Include="buffer.cu" />
+    <CudaCompile Include="nn.cu" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="common.cpp" />
@@ -19,6 +22,8 @@
     <ClCompile Include="preset_primitives.cpp" />
     <ClCompile Include="matrix.cpp" />
     <ClCompile Include="preset_material.cpp" />
+    <ClCompile Include="preset_filter.cpp" />
+    <ClCompile Include="preset_nnearth.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="antialias.h" />
@@ -31,5 +36,8 @@
     <ClInclude Include="preset.h" />
     <ClInclude Include="matrix.h" />
     <ClInclude Include="material.h" />
+    <ClInclude Include="filter.h" />
+    <ClInclude Include="buffer.h" />
+    <ClInclude Include="nn.h" />
   </ItemGroup>
 </Project>

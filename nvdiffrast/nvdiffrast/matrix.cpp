@@ -1,15 +1,15 @@
 #include "matrix.h"
 
 void Matrix::init(Matrix& mat) {
-	mat.rotation = glm::mat4(1.);
-	mat.translation = glm::vec3(0., 0., 0.);
-	mat.eye = glm::vec3(0., 0., 5.);
-	mat.origin = glm::vec3(0., 0., 0.);
-	mat.up = glm::vec3(0., 1., 0.);
-	mat.fovy = 60.;
-	mat.aspect = 1.;
-	mat.znear = 0.1;
-	mat.zfar = 10.;
+	mat.rotation = glm::mat4(1.f);
+	mat.translation = glm::vec3(0.f, 0.f, 0.f);
+	mat.eye = glm::vec3(0.f, 0.f, 5.f);
+	mat.origin = glm::vec3(0.f, 0.f, 0.f);
+	mat.up = glm::vec3(0.f, 1.f, 0.f);
+	mat.fovy = 60.f;
+	mat.aspect = 1.f;
+	mat.znear = .1f;
+	mat.zfar = 10.f;
 	cudaMalloc(&mat.r, 16 * sizeof(float));
 	cudaMalloc(&mat.m, 16 * sizeof(float));
 	cudaMalloc(&mat.mv, 16 * sizeof(float));

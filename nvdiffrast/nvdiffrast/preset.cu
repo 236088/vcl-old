@@ -17,9 +17,9 @@ void drawBuffer(RenderBuffer& rb, RenderingParams& p, float* pixels, int dimenti
 	glBindTexture(GL_TEXTURE_2D, rb.buffer);
 	glTexImage2D(GL_TEXTURE_2D, 0, internalformat, p.width, p.height, 0, format, GL_FLOAT, rb.pixels);
 	glBegin(GL_POLYGON);
-	glTexCoord2f(0.0f, 0.0f); glVertex2f(minX, minY);
-	glTexCoord2f(0.0f, 1.0f); glVertex2f(minX, maxY);
-	glTexCoord2f(1.0f, 1.0f); glVertex2f(maxX, maxY);
-	glTexCoord2f(1.0f, 0.0f); glVertex2f(maxX, minY);
+	glTexCoord2f(0.f, 0.f); glVertex2f(minX, minY);
+	glTexCoord2f(0.f, 1.f); glVertex2f(minX, maxY);
+	glTexCoord2f(1.f, 1.f); glVertex2f(maxX, maxY);
+	glTexCoord2f(1.f, 0.f); glVertex2f(maxX, minY);
 	glEnd();
 }

@@ -1,55 +1,5 @@
 #include "optimize.h"
 
-__global__ void square(const LossParams loss) {
-	int px = blockIdx.x * blockDim.x + threadIdx.x;
-	int py = blockIdx.y * blockDim.y + threadIdx.y;
-	int pz = blockIdx.z;
-	if (px >= loss.width || py >= loss.height || pz >= loss.depth)return;
-	int pidx = px + loss.width * (py + loss.height * pz);
-	loss.buffer[pidx] = loss.predict[pidx] - loss.target[pidx];
-	loss.buffer[pidx] *= loss.buffer[pidx];
-}
-
-__global__ void reduction(const LossParams loss, int width, int height, int stride) {
-	int px = blockIdx.x * blockDim.x + threadIdx.x;
-	int py = blockIdx.y * blockDim.y + threadIdx.y;
-	int pz = blockIdx.z;
-	int pidx = px + width * (py + height * pz);
-	loss.buffer[pidx] += loss.buffer[pidx + stride];
-}
-
-int msb(int v)
-{
-	int b = 0;
-	if (v & 0xffff0000)b += 16;
-	if (v & 0xff00ff00)b += 8;
-	if (v & 0xf0f0f0f0)b += 4;
-	if (v & 0xcccccccc)b += 2;
-	if (v & 0xaaaaaaaa)b += 1;
-	return b;
-}
-
-float Loss::MSE(LossParams& loss) {
-	void* sargs[] = { &loss };
-	cudaLaunchKernel(square, loss.grid, loss.block, sargs, 0, NULL);
-	int b = msb(loss.size);
-	int stride = 1 << (b - 1);
-	int w = 1 << (b / 2), h = 1 << (b - 1 - b / 2);
-	void* args[] = { &loss, &w, &h, &stride };
-	while (stride > 0)
-	{
-		dim3 block = getBlock(w, h);
-		dim3 grid = getGrid(block, w, h);
-		cudaLaunchKernel(reduction, grid, block, args, 0, NULL);
-		stride >>= 1;
-		if (h >= w)h >>= 1;
-		else w >>= 1;
-	}
-	float sum;
-	cudaMemcpy(&sum, loss.buffer, sizeof(float), cudaMemcpyDeviceToHost);
-	return sum / loss.size;
-}
-
 void Loss::init(LossParams& loss, float* predict, float* target, RenderingParams& p, int dimention) {
 	loss.predict = predict;
 	loss.target = target;
@@ -63,15 +13,65 @@ void Loss::init(LossParams& loss, float* predict, float* target, RenderingParams
 	int width = p.width, height = p.height;
 	int w = 1, h = 1;
 	if (width > MAX_DIM_PER_BLOCK) {
-		w = (width + MAX_DIM_PER_BLOCK - 1) / MAX_DIM_PER_BLOCK;
+		w = (width - 1) / MAX_DIM_PER_BLOCK + 1;
 		width = MAX_DIM_PER_BLOCK;
 	}
 	if (height > MAX_DIM_PER_BLOCK) {
-		h = (height + MAX_DIM_PER_BLOCK - 1) / MAX_DIM_PER_BLOCK;
+		h = (height - 1) / MAX_DIM_PER_BLOCK + 1;
 		height = MAX_DIM_PER_BLOCK;
 	}
 	loss.block = dim3(width, height);
 	loss.grid = dim3(w, h, dimention);
+
+	int msb = 0;
+	if (loss.size & 0xffff0000)msb += 16;
+	if (loss.size & 0xff00ff00)msb += 8;
+	if (loss.size & 0xf0f0f0f0)msb += 4;
+	if (loss.size & 0xcccccccc)msb += 2;
+	if (loss.size & 0xaaaaaaaa)msb += 1;
+	int hmsb = msb / 2;
+	--msb;
+	loss.stride = 1 << msb;
+	loss.lh = 1 << hmsb;
+	loss.rh= 1 << (msb - hmsb);
+}
+
+__global__ void square(const LossParams loss) {
+	int px = blockIdx.x * blockDim.x + threadIdx.x;
+	int py = blockIdx.y * blockDim.y + threadIdx.y;
+	int pz = blockIdx.z;
+	int pidx = px + loss.width * (py + loss.height * pz);
+	if (pidx >= loss.size)return;
+	loss.buffer[pidx] = loss.predict[pidx] - loss.target[pidx];
+	loss.buffer[pidx] *= loss.buffer[pidx];
+}
+
+__global__ void reduction(const LossParams loss, int width, int height, int stride) {
+	int px = blockIdx.x * blockDim.x + threadIdx.x;
+	int py = blockIdx.y * blockDim.y + threadIdx.y;
+	int pz = blockIdx.z;
+	int pidx = px + width * (py + height * pz);
+	if (pidx + stride >= loss.size)return;
+	loss.buffer[pidx] += loss.buffer[pidx + stride];
+}
+
+float Loss::MSE(LossParams& loss) {
+	void* sargs[] = { &loss };
+	cudaLaunchKernel(square, loss.grid, loss.block, sargs, 0, NULL);
+	int stride = loss.stride, w = loss.lh, h = loss.rh;
+	void* args[] = { &loss, &w, &h, &stride };
+	while (stride > 0)
+	{
+		dim3 block = getBlock(w, h);
+		dim3 grid = getGrid(block, w, h);
+		cudaLaunchKernel(reduction, grid, block, args, 0, NULL);
+		stride >>= 1;
+		if (h >= w)h >>= 1;
+		else w >>= 1;
+	}
+	float sum;
+	cudaMemcpy(&sum, loss.buffer, sizeof(float), cudaMemcpyDeviceToHost);
+	return sum / 2.;
 }
 
 __global__ void lossGradient(const LossParams loss) {
@@ -88,67 +88,18 @@ void Loss::backward(LossParams& loss) {
 	cudaLaunchKernel(lossGradient, loss.grid, loss.block, args, 0, NULL);
 }
 
-void Adam::init(AdamParams& adam, float* param, float* grad, int size, int width, int height, int depth, double rhom, double rhov, double eta, double eps) {
-	adam.param = param;
-	adam.grad = grad;
-	adam.it = 1;
-	adam.rhom = rhom;
-	adam.rhov = rhov;
-	adam.rhomt = rhom;
-	adam.rhovt = rhov;
-	adam.eta = eta;
-	adam.eps = eps;
-	cudaMalloc(&adam.m, size * sizeof(float));
-	cudaMemset(adam.m, 0, size * sizeof(float));
-	cudaMalloc(&adam.v, size * sizeof(float));
-	cudaMemset(adam.v, 0, size * sizeof(float));
-	adam.size = size;
-	adam.width = width;
-	adam.height = height;
-	adam.depth = depth;
-	int w = 1, h = 1;
-	if (width > MAX_DIM_PER_BLOCK) {
-		w = (width + MAX_DIM_PER_BLOCK - 1) / MAX_DIM_PER_BLOCK;
-		width = MAX_DIM_PER_BLOCK;
-	}
-	if (height > MAX_DIM_PER_BLOCK) {
-		h = (height + MAX_DIM_PER_BLOCK - 1) / MAX_DIM_PER_BLOCK;
-		height = MAX_DIM_PER_BLOCK;
-	}
-	adam.block = dim3(width, height);
-	adam.grid = dim3(w, h, depth);
-}
 
-void Adam::init(AdamParams& adam, Attribute& attr, int width, int height, int depth, double rhom, double rhov, double eta, double eps) {
-	adam.param = attr.vbo;
-	adam.grad = attr.grad;
-	adam.it = 1;
-	adam.rhom = rhom;
-	adam.rhov = rhov;
-	adam.rhomt = rhom;
-	adam.rhovt = rhov;
-	adam.eta = eta;
-	adam.eps = eps;
-	int size = attr.vboNum * attr.dimention;
-	cudaMalloc(&adam.m, size * sizeof(float));
-	cudaMemset(adam.m, 0, size * sizeof(float));
-	cudaMalloc(&adam.v, size * sizeof(float));
-	cudaMemset(adam.v, 0, size * sizeof(float));
-	adam.size = size;
-	adam.width = width;
-	adam.height = height;
-	adam.depth = depth;
-	int w = 1, h = 1;
-	if (width > MAX_DIM_PER_BLOCK) {
-		w = (width + MAX_DIM_PER_BLOCK - 1) / MAX_DIM_PER_BLOCK;
-		width = MAX_DIM_PER_BLOCK;
-	}
-	if (height > MAX_DIM_PER_BLOCK) {
-		h = (height + MAX_DIM_PER_BLOCK - 1) / MAX_DIM_PER_BLOCK;
-		height = MAX_DIM_PER_BLOCK;
-	}
-	adam.block = dim3(width, height);
-	adam.grid = dim3(w, h, depth);
+
+void Optimizer::init(OptimizeParams& opt, float* param, float* grad, int size, int width, int height, int depth) {
+	opt.param = param;
+	opt.grad = grad;
+	opt.size = size;
+	opt.it = 1;
+	opt.width = width;
+	opt.height = height;
+	opt.depth = depth;
+	opt.block = getBlock(width, height);
+	opt.grid = getGrid(opt.block, width, height, depth);
 }
 
 __device__ __forceinline__ float getUniform(unsigned int a, unsigned  int b, unsigned int c)
@@ -162,25 +113,50 @@ __device__ __forceinline__ float getUniform(unsigned int a, unsigned  int b, uns
 	a -= b; a -= c; a ^= (c >> 3);
 	b -= c; b -= a; b ^= (a << 10);
 	c -= a; c -= b; c ^= (b >> 15);
-	int d = 0x007fffff; 
+	int d = 0x007fffff;
 	return (float)(c & d) / (float)d;
 }
 
-__global__ void random( const AdamParams adam, long seed) {
+__global__ void random(const OptimizeParams opt, long seed, float min, float max) {
 	int px = blockIdx.x * blockDim.x + threadIdx.x;
 	int py = blockIdx.y * blockDim.y + threadIdx.y;
 	int pz = blockIdx.z;
-	int pidx = px + adam.width * (py + adam.height * pz);
-	if (pidx >= adam.size)return;
+	int pidx = px + opt.width * (py + opt.height * pz);
+	if (pidx >= opt.size)return;
 	unsigned int rnd = pidx;
-	adam.param[pidx] = getUniform(rnd, (unsigned int)seed, 0xdeadbeef);
+	opt.param[pidx] = min + (max - min) * getUniform(rnd, (unsigned int)seed, 0xdeadbeef);
 }
 
-void Adam::randomParams(AdamParams& adam) {
-	struct timespec t{};
+void Optimizer::randomParams(OptimizeParams& opt, float min, float max) {
+	struct timespec t;
+	timespec_get(&t, TIME_UTC);
 	long nsec = t.tv_nsec;
-	void* args[] = { &adam ,&nsec};
-	cudaLaunchKernel(random , adam.grid, adam.block, args, 0, NULL);
+	void* args[] = { &opt ,&nsec, &min, &max };
+	cudaLaunchKernel(random, opt.grid, opt.block, args, 0, NULL);
+}
+
+void Adam::init(AdamParams& adam,double eta, double rhom, double rhov,  double eps) {
+	adam.rhom = rhom;
+	adam.rhov = rhov;
+	adam.rhomt = rhom;
+	adam.rhovt = rhov;
+	adam.eta = eta;
+	adam.eps = eps;
+	cudaMalloc(&adam.m, adam.size * sizeof(float));
+	cudaMemset(adam.m, 0, adam.size * sizeof(float));
+	cudaMalloc(&adam.v, adam.size * sizeof(float));
+	cudaMemset(adam.v, 0, adam.size * sizeof(float));
+}
+
+void Adam::init(AdamParams& adam, float* param, float* grad, int size, int width, int height, int depth, double eta, double rhom, double rhov, double eps) {
+	Optimizer::init(adam, param, grad, size, width, height, depth);
+	init(adam, eta, rhom, rhov, eps);
+}
+
+void Adam::init(AdamParams& adam, Attribute& attr, float* grad, double eta, double rhom, double rhov, double eps) {
+	int size = attr.vboNum * attr.dimention;
+	Optimizer::init(adam, attr.vbo, grad, size, attr.vboNum, attr.dimention, 1);
+	init(adam, eta,rhom, rhov,  eps);
 }
 
 __global__ void adamStep(const AdamParams adam) {
@@ -190,11 +166,11 @@ __global__ void adamStep(const AdamParams adam) {
 	int pidx = px + adam.width * (py + adam.height * pz);
 	if (pidx >= adam.size)return;
 
-	adam.m[pidx] = adam.rhom * adam.m[pidx] + (1.0 - adam.rhom) * adam.grad[pidx];
-	adam.v[pidx] = adam.rhov * adam.v[pidx] + (1.0 - adam.rhov) * adam.grad[pidx] * adam.grad[pidx];
-	double m = adam.m[pidx] / (1.0 - adam.rhomt);
-	double v = adam.v[pidx] / (1.0 - adam.rhovt);
-	AddNaNcheck(adam.param[pidx], -adam.eta / sqrt(v + adam.eps) * m);
+	adam.m[pidx] = adam.rhom * adam.m[pidx] + (1 - adam.rhom) * adam.grad[pidx];
+	adam.v[pidx] = adam.rhov * adam.v[pidx] + (1 - adam.rhov) * adam.grad[pidx] * adam.grad[pidx];
+	double m = adam.m[pidx] / (1 - adam.rhomt);
+	double v = adam.v[pidx] / (1 - adam.rhovt);
+	AddNaNcheck(adam.param[pidx], -m * adam.eta / (sqrt(v) + adam.eps));
 }
 
 void Adam::step(AdamParams& adam) {
@@ -203,4 +179,60 @@ void Adam::step(AdamParams& adam) {
 	adam.rhovt *= adam.rhov;
 	void* args[] = { &adam };
 	cudaLaunchKernel(adamStep, adam.grid, adam.block, args, 0, NULL);
+}
+
+void Nadam::init(NadamParams& nadam, double alpha,  double mu, double rho, double eps) {
+	nadam.mupow = pow(0.96, 0.004);
+	nadam.mupowt = nadam.mupow;
+	nadam.mu = mu;
+	nadam.mu0 = mu * (1 - .5 * nadam.mupowt);
+	nadam.mupowt *= nadam.mupow;
+	nadam.mu1 = mu * (1 - .5 * nadam.mupowt);
+	nadam.rho = rho;
+	nadam.alpha = alpha;
+	nadam.mut0 = nadam.mu0;
+	nadam.mut1 = nadam.mu0 * nadam.mu1;
+	nadam.rhot = rho;
+	nadam.eps = eps;
+	cudaMalloc(&nadam.m, nadam.size * sizeof(float));
+	cudaMemset(nadam.m, 0, nadam.size * sizeof(float));
+	cudaMalloc(&nadam.v, nadam.size * sizeof(float));
+	cudaMemset(nadam.v, 0, nadam.size * sizeof(float));
+}
+
+void Nadam::init(NadamParams& nadam, float* param, float* grad, int size, int width, int height, int depth,  double alpha, double mu,double rho, double eps) {
+	Optimizer::init(nadam, param, grad, size, width, height, depth);
+	init(nadam,alpha,  mu, rho, eps);
+}
+
+void Nadam::init(NadamParams& nadam, Attribute& attr, float* grad, double alpha, double mu, double rho, double eps) {
+	int size = attr.vboNum * attr.dimention;
+	Optimizer::init(nadam, attr.vbo, grad, size, attr.vboNum, attr.dimention, 1);
+	init(nadam, alpha, mu, rho, eps);
+}
+
+__global__ void nadamStep(const NadamParams nadam) {
+	int px = blockIdx.x * blockDim.x + threadIdx.x;
+	int py = blockIdx.y * blockDim.y + threadIdx.y;
+	int pz = blockIdx.z;
+	int pidx = px + nadam.width * (py + nadam.height * pz);
+	if (pidx >= nadam.size)return;
+
+	nadam.m[pidx] = nadam.mu * nadam.m[pidx] + (1 - nadam.mu) * nadam.grad[pidx];
+	nadam.v[pidx] = nadam.rho * nadam.v[pidx] + (1 - nadam.rho) * nadam.grad[pidx] * nadam.grad[pidx];
+	double m =  nadam.mu1 / (1 - nadam.mut1) *nadam.m[pidx] + (1 - nadam.mu0) / (1- nadam.mut0) * nadam.grad[pidx];
+	double v = 1 / (1 - nadam.rhot) * nadam.v[pidx];
+	AddNaNcheck(nadam.param[pidx], -m * nadam.alpha / (sqrt(v) + nadam.eps));
+}
+
+void Nadam::step(NadamParams& nadam) {
+	nadam.it++;
+	nadam.mu0 = nadam.mu1;
+	nadam.mut0 = nadam.mut1;
+	nadam.mupowt *= nadam.mupow;
+	nadam.mu1 = nadam.mu * (1 - .5 * nadam.mupowt);
+	nadam.mut1 *= nadam.mu1;
+	nadam.rhot *= nadam.rho;
+	void* args[] = { &nadam };
+	cudaLaunchKernel(nadamStep, nadam.grid, nadam.block, args, 0, NULL);
 }

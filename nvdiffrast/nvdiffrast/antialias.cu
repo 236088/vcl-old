@@ -2,13 +2,15 @@
 
 __device__ __forceinline__ void forwardEdgeLeak(const AntialiasParams ap, int pidx, int oidx, float2 pa, float2 pb, float2 o) {
     float a = cross(pa, pb);
-    if (a * cross(pa - o, pb - o) > 0)return;
+    float oa = cross(pa - o, pb - o);
+    if (a * oa > 0) return;
     float2 e = pa - pb;
     float n = (o.x + o.y) * (o.x - o.y);
     if ((e.x + e.y) * (e.x - e.y) * n > 0)return;
-    float D = cross(e, o);
-    float ia = 1.0 / (D + (D > 0 ? 1e-3 : -1e-3));
-    float alpha = a * ia - 0.5;
+    e *= (o.x + o.y);
+    float D = n > 0 ? -e.y : e.x;
+    float ia =1.f / (D + (D > 0 ? 1e-3 : -1e-3));
+    float alpha = a * ia - .5f;
     for (int i = 0; i < ap.channel; i++) {
         float diff = ap.in[pidx * ap.channel + i] - ap.in[oidx * ap.channel + i];
         if (alpha > 0) {
@@ -28,21 +30,21 @@ __device__ __forceinline__ void forwardTriangleFetch(const AntialiasParams ap, c
     float2 v0 = ((float2*)ap.pos)[idx0 * 2];
     float2 v1 = ((float2*)ap.pos)[idx1 * 2];
     float2 v2 = ((float2*)ap.pos)[idx2 * 2];
-    float iw0 = 1.0 / ap.pos[idx0 * 4 + 3];
-    float iw1 = 1.0 / ap.pos[idx1 * 4 + 3];
-    float iw2 = 1.0 / ap.pos[idx2 * 4 + 3];
+    float iw0 =1.f / ap.pos[idx0 * 4 + 3];
+    float iw1 =1.f / ap.pos[idx1 * 4 + 3];
+    float iw2 =1.f / ap.pos[idx2 * 4 + 3];
     float2 o = make_float2(d - 1, -d);
     if (pidx < oidx) {
         f += o;
         o = -o;
     }
     float2 p0, p1, p2;
-    p0.x = (v0.x * iw0 + 1.0) * ap.xh - f.x;
-    p0.y = (v0.y * iw0 + 1.0) * ap.yh - f.y;
-    p1.x = (v1.x * iw1 + 1.0) * ap.xh - f.x;
-    p1.y = (v1.y * iw1 + 1.0) * ap.yh - f.y;
-    p2.x = (v2.x * iw2 + 1.0) * ap.xh - f.x;
-    p2.y = (v2.y * iw2 + 1.0) * ap.yh - f.y;
+    p0.x = (v0.x * iw0 +1.f) * ap.xh - f.x;
+    p0.y = (v0.y * iw0 +1.f) * ap.yh - f.y;
+    p1.x = (v1.x * iw1 +1.f) * ap.xh - f.x;
+    p1.y = (v1.y * iw1 +1.f) * ap.yh - f.y;
+    p2.x = (v2.x * iw2 +1.f) * ap.xh - f.x;
+    p2.y = (v2.y * iw2 +1.f) * ap.yh - f.y;
     forwardEdgeLeak(ap, pidx, oidx, p0, p1, o);
     forwardEdgeLeak(ap, pidx, oidx, p1, p2, o);
     forwardEdgeLeak(ap, pidx, oidx, p2, p0, o);
@@ -60,7 +62,7 @@ __global__ void AntialiasForwardKernel(const AntialiasParams ap, const Rendering
     float2 tri = ((float2*)ap.rast)[pidx * 2 + 1];
     float2 trih = px > 0 ? ((float2*)ap.rast)[(pidx - 1) * 2 + 1] : tri;
     float2 triv = py > 0 ? ((float2*)ap.rast)[(pidx - p.width) * 2 + 1] : tri;
-    float2 f = make_float2((float)px + 0.5, (float)py + 0.5);
+    float2 f = make_float2((float)px + .5f, (float)py + .5f);
 
     if (trih.y != tri.y) {
         int oidx = pidx - 1;
@@ -91,8 +93,8 @@ void Antialias::init(AntialiasParams& ap, RenderingParams& p, Attribute& pos, Pr
     ap.rast = rp.out;
     ap.in = in;
     ap.posNum = pos.vboNum;
-    ap.xh = p.width / 2.0;
-    ap.yh = p.height / 2.0;
+    ap.xh = p.width / 2.f;
+    ap.yh = p.height / 2.f;
     cudaMalloc(&ap.out, p.width * p.height * channel * sizeof(float));
 }
 
@@ -105,10 +107,10 @@ void Antialias::forward(AntialiasParams& ap, RenderingParams& p) {
 // horizontal :0, vertical 1;
 // 
 // (pa, pb) crossed edge (va, vb) screen scale and (fx,fy) to orgin
-// pa.x = (va.x/va.w+1.0)*width/2 - (0.5+px)
-// pa.y = (va.y/va.w+1.0)*height/2 - (0.5+py)
-// pb.x = (vb.x/vb.w+1.0)*width/2 - (0.5+px)
-// pb.y = (vb.y/vb.w+1.0)*height/2 - (0.5+py)
+// pa.x = (va.x/va.w+1.f)*width/2 - (0.5+px)
+// pa.y = (va.y/va.w+1.f)*height/2 - (0.5+py)
+// pb.x = (vb.x/vb.w+1.f)*width/2 - (0.5+px)
+// pb.y = (vb.y/vb.w+1.f)*height/2 - (0.5+py)
 // 
 // if horizontal (1,0)
 //   D = pb.y - pa.y
@@ -120,7 +122,7 @@ void Antialias::forward(AntialiasParams& ap, RenderingParams& p) {
 //   d0 = (pa.x*pb.y-pa.y*pb.x) /D
 //   d1 = -(pa.x*(pb.y-1)-(pa.y-1)*pb.x) /D
 //      =1-d0
-// D = cross(pa - pb, o);
+// D = dot(pa - pb, o);
 //
 //  
 // if d0 - 0.5 > 0 then
@@ -140,6 +142,7 @@ void Antialias::forward(AntialiasParams& ap, RenderingParams& p) {
 // (f = F/D)' = (F' - f*D')/D
 // 
 // dL/d(x,y,w) = dL/dpout * dpout/d(x,y,w) + dL/doout * doout/d(x,y,w)
+//         =  dL/dout * (pin - oin) * dd0/d(x,y,w) 
 // 
 // dpa.x/dva.x=width/2/va.w
 // dpa.y/dva.y=height/2/va.w
@@ -168,14 +171,16 @@ void Antialias::forward(AntialiasParams& ap, RenderingParams& p) {
 
 __device__ __forceinline__ void backwardEdgeLeak(const AntialiasParams ap, int pidx, int oidx, float2 pa, float2 pb, int idxa, int idxb, float iwa, float iwb, float2 o) {
     float a = cross(pa, pb);
-    if (a * cross(pa - o, pb - o) > 0) return;
+    float oa = cross(pa - o, pb - o);
+    if (a * oa > 0) return;
     float2 e = pa - pb;
     float n = (o.x + o.y) * (o.x - o.y);
     if ((e.x + e.y) * (e.x - e.y) * n > 0)return;
-    float D = cross(e, o);
-    float ia = 1.0 / (D + (D > 0 ? 1e-3 : -1e-3));
-    float alpha = a * ia - 0.5;
-    float d = 0.0;
+    e *= (o.x + o.y);
+    float D = n > 0 ? -e.y : e.x;
+    float ia =1.f / (D + (D > 0 ? 1e-3 : -1e-3));
+    float alpha = a * ia - .5f;
+    float d = 0.f;
     for (int i = 0; i < ap.channel; i++) {
         float dLdout = alpha > 0 ? ap.dLdout[oidx * ap.channel + i] : ap.dLdout[pidx * ap.channel + i];
         float diff = ap.in[pidx * ap.channel + i] - ap.in[oidx * ap.channel + i];
@@ -188,19 +193,20 @@ __device__ __forceinline__ void backwardEdgeLeak(const AntialiasParams ap, int p
     float dLday = d * ap.yh * iwa;
     float dLdbx = d * ap.xh * iwb;
     float dLdby = d * ap.yh * iwb;
+
     float r = n > 0 ? e.x : -e.y;
     r *= ia;
     if (n > 0) {
         dLdax *= pb.y;
         dLday *= pb.y * r;
-        dLdbx *= -pa.x;
-        dLdby *= -pa.x * r;
+        dLdbx *= -pa.y;
+        dLdby *= -pa.y * r;
     }
     else {
         dLdax *= -pb.x * r;
         dLday *= -pb.x;
-        dLdbx *= pa.y * r;
-        dLdby *= pa.y;
+        dLdbx *= pa.x * r;
+        dLdby *= pa.x;
 
     }
     atomicAdd_xyw(ap.gradPos + idxa * 4, dLdax, dLday, -dLdax * pa.x - dLday * pa.y);
@@ -215,21 +221,21 @@ __device__ __forceinline__ void backwardTriangleFetch(const AntialiasParams ap, 
     float2 v0 = ((float2*)ap.pos)[idx0 * 2];
     float2 v1 = ((float2*)ap.pos)[idx1 * 2];
     float2 v2 = ((float2*)ap.pos)[idx2 * 2];
-    float iw0 = 1.0 / ap.pos[idx0 * 4 + 3];
-    float iw1 = 1.0 / ap.pos[idx1 * 4 + 3];
-    float iw2 = 1.0 / ap.pos[idx2 * 4 + 3];
+    float iw0 =1.f / ap.pos[idx0 * 4 + 3];
+    float iw1 =1.f / ap.pos[idx1 * 4 + 3];
+    float iw2 =1.f / ap.pos[idx2 * 4 + 3];
     float2 o = make_float2(d - 1, -d);
     if (pidx < oidx) {
         f += o;
         o = -o;
     }
     float2 p0, p1, p2;
-    p0.x = (v0.x * iw0 + 1.0) * ap.xh - f.x;
-    p0.y = (v0.y * iw0 + 1.0) * ap.yh - f.y;
-    p1.x = (v1.x * iw1 + 1.0) * ap.xh - f.x;
-    p1.y = (v1.y * iw1 + 1.0) * ap.yh - f.y;
-    p2.x = (v2.x * iw2 + 1.0) * ap.xh - f.x;
-    p2.y = (v2.y * iw2 + 1.0) * ap.yh - f.y;
+    p0.x = (v0.x * iw0 +1.f) * ap.xh - f.x;
+    p0.y = (v0.y * iw0 +1.f) * ap.yh - f.y;
+    p1.x = (v1.x * iw1 +1.f) * ap.xh - f.x;
+    p1.y = (v1.y * iw1 +1.f) * ap.yh - f.y;
+    p2.x = (v2.x * iw2 +1.f) * ap.xh - f.x;
+    p2.y = (v2.y * iw2 +1.f) * ap.yh - f.y;
 
     backwardEdgeLeak(ap, pidx, oidx, p0, p1, idx0, idx1, iw0, iw1, o);
     backwardEdgeLeak(ap, pidx, oidx, p1, p2, idx1, idx2, iw1, iw2, o);
@@ -249,7 +255,7 @@ __global__ void AntialiasBackwardKernel(const AntialiasParams ap, const Renderin
     float2 tri = ((float2*)ap.rast)[pidx * 2 + 1];
     float2 trih = px > 0 ? ((float2*)ap.rast)[(pidx - 1) * 2 + 1] : tri;
     float2 triv = py > 0 ? ((float2*)ap.rast)[(pidx - p.width) * 2 + 1] : tri;
-    float2 f = make_float2((float)px + 0.5, (float)py + 0.5);
+    float2 f = make_float2((float)px + .5f, (float)py + .5f);
 
     if (trih.y != tri.y) {
         int oidx = pidx - 1;

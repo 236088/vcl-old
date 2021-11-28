@@ -1,19 +1,27 @@
 #include "preset.h"
 #include <ctime>
 
+//PresetNNEarth preset;
+//PresetFilter preset;
 PresetMaterial preset;
 //PresetEarth preset;
 //PresetCube preset;
 //PresetPrimitives preset;
 
-static void InitFunc()
-{
-	preset.init();
-}
-
+struct timespec pre, cur;
+double t;
 float loss_sum = 0;
 int count = 0;
 int interbal = 100;
+bool play = false;
+
+static void InitFunc()
+{
+	timespec_get(&cur, TIME_UTC);
+	srand(cur.tv_nsec);
+	preset.init();
+}
+
 static void DisplayFunc(void)
 {
 	preset.display();
@@ -22,12 +30,9 @@ static void DisplayFunc(void)
 		printf(" count: %d, loss: %f\n", count, loss_sum / interbal);
 		loss_sum = 0;
 	}
-	if (count > 5000)exit(0);
+	if (count % 10000 == 0)play = false;
 }
 
-struct timespec pre, cur;
-double t;
-bool play = false;
 static void IdleFunc(void) 
 {	
 	if (!play)return;

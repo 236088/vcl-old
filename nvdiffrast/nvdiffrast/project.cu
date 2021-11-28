@@ -29,7 +29,7 @@ void Project::forward(ProjectParams& pp) {
 
 void Project::init(ProjectParams& pp, Attribute& pos, float* dLdout) {
 	pp.dLdout = dLdout;
-	pp.gradPos = pos.grad;
+	cudaMalloc(&pp.gradPos, pos.vboNum * pos.dimention* sizeof(float));
 }
 
 __global__ void ProjectionBackwardKernel(const ProjectParams pp) {

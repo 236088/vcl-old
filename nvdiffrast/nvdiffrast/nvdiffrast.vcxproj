@@ -16,26 +16,34 @@
     <ClCompile Include="matrix.cpp" />
     <ClCompile Include="preset_cube.cpp" />
     <ClCompile Include="preset_earth.cpp" />
+    <ClCompile Include="preset_filter.cpp" />
     <ClCompile Include="preset_material.cpp" />
+    <ClCompile Include="preset_nnearth.cpp" />
     <ClCompile Include="preset_primitives.cpp" />
     <ClCompile Include="rasterize.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="antialias.h" />
+    <ClInclude Include="buffer.h" />
     <ClInclude Include="common.h" />
     <ClInclude Include="interpolate.h" />
     <ClInclude Include="material.h" />
     <ClInclude Include="matrix.h" />
+    <ClInclude Include="nn.h" />
     <ClInclude Include="optimize.h" />
     <ClInclude Include="preset.h" />
     <ClInclude Include="project.h" />
     <ClInclude Include="rasterize.h" />
     <ClInclude Include="texturemap.h" />
+    <ClInclude Include="filter.h" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="antialias.cu" />
+    <CudaCompile Include="buffer.cu" />
+    <CudaCompile Include="filter.cu" />
     <CudaCompile Include="interpolate.cu" />
     <CudaCompile Include="material.cu" />
+    <CudaCompile Include="nn.cu" />
     <CudaCompile Include="optimize.cu" />
     <CudaCompile Include="preset.cu" />
     <CudaCompile Include="project.cu" />

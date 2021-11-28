@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "buffer.h"
 #include "rasterize.h"
 #include "interpolate.h"
 

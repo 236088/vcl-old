@@ -20,24 +20,24 @@ void PresetCube::Randomize() {
 	cudaMallocHost(&predict_pos_vbo, target_pos.vboNum * 3 * sizeof(float));
 	cudaMallocHost(&predict_color_vbo, target_pos.vboNum * 3 * sizeof(float));
 	for (int i = 0; i < target_pos.vboNum * 3; i++) {
-		target_color_vbo[i] = (target_pos.h_vbo[i] + 1.0) / 2.0;
-		float r = -(float)rand() / (float)RAND_MAX + 0.5;
-		predict_pos_vbo[i] = target_pos.h_vbo[i] + r;
+		target_color_vbo[i] = (target_pos.h_vbo[i] + 1.f) / 2.f;
 		predict_color_vbo[i] = (float)rand() / (float)RAND_MAX;
+		float r = (float)rand() / (float)RAND_MAX - .5f;
+		predict_pos_vbo[i] = target_pos.h_vbo[i] + r;
 	}
-	Attribute::init(target_color, target_color_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3, false);
-	Attribute::init(predict_pos, predict_pos_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3, true);
-	Attribute::init(predict_color, predict_color_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3, true);
+	Attribute::init(target_color, target_color_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3);
+	Attribute::init(predict_pos, predict_pos_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3);
+	Attribute::init(predict_color, predict_color_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3);
 	cudaFree(target_color_vbo); cudaFree(predict_pos_vbo); cudaFree(predict_color_vbo);
 }
 
 void PresetCube::init(int resolution) {
 	Matrix::init(mat);
 	Matrix::setFovy(mat, 45);
-	Matrix::setEye(mat, 3.0, 3.0, 2.0);
+	Matrix::setEye(mat, 0.f, 2.f, 5.f);
 	Matrix::init(hr_mat);
 	Matrix::setFovy(hr_mat, 45);
-	Matrix::setEye(hr_mat, 3.0, 3.0, 2.0);
+	Matrix::setEye(hr_mat, 0.f, 2.f, 5.f);
 	Rendering::init(p, resolution, resolution, 1);
 	Rendering::init(hr_p, 512, 512, 1);
 	Attribute::loadOBJ("../../cube.obj", target_pos, texel, normal);
@@ -51,8 +51,8 @@ void PresetCube::init(int resolution) {
 	Interpolate::init(predict.ip, p, predict_color, predict.ap.gradIn);
 	Rasterize::init(predict.rp, p, predict.ip.gradRast);
 	Project::init(predict.pp, predict_pos, predict.rp.gradPos);
-	Adam::init(pos_adam, predict_pos, predict_pos.vboNum, 3, 1, 0.9, 0.999, 1e-3, 1e-8);
-	Adam::init(color_adam, predict_color, predict_color.vboNum, 3, 1, 0.9, 0.999, 1e-3, 1e-8);
+	Adam::init(pos_adam, predict_pos,predict.pp.gradPos,1e-2, 0.9, 0.999,  1e-8);
+	Adam::init(color_adam, predict_color, predict.ip.gradAttr, 1e-2,0.9, 0.999,  1e-8);
 
 	hr_target.init(hr_p, hr_mat, target_pos, target_color);
 	hr_predict.init(hr_p, hr_mat, predict_pos, predict_color);
@@ -69,8 +69,6 @@ void PresetCube::display(void) {
 	predict.forward(p);
 
 	Loss::backward(loss);
-	Attribute::gradClear(predict_pos);
-	Attribute::gradClear(predict_color);
 	Antialias::backward(predict.ap, p);
 	Interpolate::backward(predict.ip, p);
 	Rasterize::backward(predict.rp, p);
@@ -87,18 +85,18 @@ void PresetCube::display(void) {
 
 	glViewport(0, 0, windowWidth, windowHeight);
 	glEnable(GL_TEXTURE_2D);
-	drawBuffer(target_buffer, p, target.ap.out,3, GL_RGB32F, GL_RGB, 0.0, 1.0, 0.0, 1.0);
-	drawBuffer(predict_buffer, p, predict.ap.out, 3, GL_RGB32F, GL_RGB, -1.0, 0.0, 0.0, 1.0);
-	drawBuffer(hr_predict_buffer, hr_p, hr_target.ap.out, 3, GL_RGB32F, GL_RGB, 0.0, 1.0, -1.0, 0.0);
-	drawBuffer(hr_target_buffer, hr_p, hr_predict.ap.out, 3, GL_RGB32F, GL_RGB, -1.0, 0.0, -1.0, 0.0);
+	drawBuffer(target_buffer, p, target.ap.out,3, GL_RGB32F, GL_RGB, 0.f, 1.f, 0.f, 1.f);
+	drawBuffer(predict_buffer, p, predict.ap.out, 3, GL_RGB32F, GL_RGB, -1.f, 0.f, 0.f, 1.f);
+	drawBuffer(hr_predict_buffer, hr_p, hr_target.ap.out, 3, GL_RGB32F, GL_RGB, 0.f, 1.f, -1.f, 0.f);
+	drawBuffer(hr_target_buffer, hr_p, hr_predict.ap.out, 3, GL_RGB32F, GL_RGB, -1.f, 0.f, -1.f, 0.f);
 	glFlush();
 }
 
 void PresetCube::update(void) {
-	float theta = (float)rand() / (float)RAND_MAX * 345.0;
-	float x = (float)rand() / (float)RAND_MAX * 2.0 - 1.0;
-	float y = (float)rand() / (float)RAND_MAX * 2.0 - 1.0;
-	float z = (float)rand() / (float)RAND_MAX * 2.0 - 1.0;
+	float theta = (float)rand() / (float)RAND_MAX * 180.f;
+	float x = (float)rand() / (float)RAND_MAX * 2.f - 1.f;
+	float y = (float)rand() / (float)RAND_MAX * 2.f - 1.f;
+	float z = (float)rand() / (float)RAND_MAX * 2.f - 1.f;
 	Matrix::setRotation(mat, theta, x, y, z);
-	Matrix::addRotation(hr_mat, 1.0, 0.0, 1.0, 0.0);
+	Matrix::addRotation(hr_mat, 1.f, 0.f, 1.f, 0.f);
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "common.h"
+#include "buffer.h"
 #include "rasterize.h"
 
 struct InterpolateParams {

@@ -11,6 +11,7 @@
 #include <device_atomic_functions.h>
 #include <cuda_runtime.h>
 
+#include <math.h>
 #include <glm/glm.hpp>
 #include <glm/gtx/transform.hpp>
 #include <vector>
@@ -19,19 +20,6 @@
 #define MAX_DIM_PER_BLOCK 32
 
 
-struct Attribute {
-	float* vbo;
-	float* h_vbo;
-	unsigned int* vao;
-	unsigned int* h_vao;
-	int vboNum;
-	int vaoNum;
-	int dimention;
-	float* grad;
-	static void init(Attribute& attr, float* h_vbo, unsigned int* h_vao, int vboNum, int vaoNum, int dimention, bool learn);
-	static void gradClear(Attribute& attr);
-	static void loadOBJ(const char* path, Attribute& pos, Attribute& texel, Attribute& normal);
-};
 
 
 struct RenderingParams {
@@ -50,6 +38,7 @@ public:
 
 dim3 getBlock(int width, int height);
 dim3 getGrid(dim3 block, int width, int height);
+dim3 getGrid(dim3 block, int width, int height, int depth);
 
 void cudaErrorCheck(const char* id, cudaError_t status);
 
@@ -105,6 +94,9 @@ static __device__ __forceinline__ float dot(float2 a, float2 b) { return a.x * b
 static __device__ __forceinline__ float dot(float3 a, float3 b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 static __device__ __forceinline__ float dot(float4 a, float4 b) { return a.x * b.x + a.y * b.y + a.z * b.z + a.w * b.w; }
 static __device__ __forceinline__ float clamp(float a, float min, float max) { return a<min ? min : a>max ? max : a; };
+static __device__ __forceinline__ float2 clamp(float2 a, float min, float max) { return make_float2(clamp(a.x,min,max),clamp(a.y,min,max)); };
+static __device__ __forceinline__ float3 clamp(float3 a, float min, float max) { return make_float3(clamp(a.x,min,max),clamp(a.y,min,max),clamp(a.z,min,max)); };
+static __device__ __forceinline__ float4 clamp(float4 a, float min, float max) { return make_float4(clamp(a.x,min,max),clamp(a.y,min,max),clamp(a.z,min,max),clamp(a.w,min,max)); };
 static __device__ __forceinline__ void swap(int& a, int& b) { int t = a; a = b; b = t; }
 static __device__ __forceinline__ void swap(float& a, float& b) { float t = a; a = b; b = t; }
 static __device__ __forceinline__ void swap(float2& a, float2& b) { float2 t = a; a = b; b = t; }
@@ -125,4 +117,4 @@ static __device__ __forceinline__ void atomicAdd_xyw(float* ptr, float x, float 
 	atomicAdd(ptr + 1, y);
 	atomicAdd(ptr + 3, w);
 }
-static __device__ __forceinline__ void AddNaNcheck(float& a, float b) { float v = a + b; if (!isnan(v))a = v; };
+static __device__ __forceinline__ void AddNaNcheck(float& a, float b) { float v = a + b; if (isfinite(v))a = v; };
