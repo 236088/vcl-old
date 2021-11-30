@@ -1,48 +1,48 @@
 #include "project.h"
 
-void Project::init(ProjectParams& pp, float* mat, Attribute& pos) {
-	pp.size = pos.vboNum;
-	pp.block = getBlock(pos.vboNum, 1);
-	pp.grid = getGrid(pp.block, pos.vboNum, 1);
-	pp.pos = pos.vbo; 
-	pp.mat = mat;
-	cudaMallocHost(&pp.host_out, pos.vboNum * 4 * sizeof(float));
-	cudaMalloc(&pp.out, pos.vboNum * 4 * sizeof(float));
+void Project::init(ProjectParams& pp, float* mat, Attribute& vec, int dimention) {
+	pp.kernel.size = vec.vboNum;
+	pp.kernel.dimention = dimention;
+	pp.block = getBlock(vec.vboNum, 1);
+	pp.grid = getGrid(pp.block, vec.vboNum, 1);
+	pp.kernel.vec = vec.vbo;
+	pp.kernel.mat = mat;
+	cudaMalloc(&pp.kernel.out, vec.vboNum * dimention * sizeof(float));
 }
 
-__global__ void ProjectionForwardKernel(const ProjectParams pp) {
+__global__ void ProjectionForwardKernel(const ProjectKernelParams pp) {
 	int pidx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (pidx > pp.size)return;
-	float3 v = ((float3*)pp.pos)[pidx];
-	pp.out[pidx * 4] = pp.mat[0] * v.x+ pp.mat[4] * v.y + pp.mat[8] * v.z + pp.mat[12];
-	pp.out[pidx * 4 + 1] = pp.mat[1] * v.x + pp.mat[5] * v.y + pp.mat[9] * v.z + pp.mat[13];
-	pp.out[pidx * 4 + 2] = pp.mat[2] * v.x + pp.mat[6] * v.y + pp.mat[10] * v.z + pp.mat[14];
-	pp.out[pidx * 4 + 3] = pp.mat[3] * v.x + pp.mat[7] * v.y + pp.mat[11] * v.z + pp.mat[15];
+	if (pidx >= pp.size)return;
+	float3 v = ((float3*)pp.vec)[pidx];
+	for (int i = 0; i < pp.dimention; i++) {
+		pp.out[pidx * pp.dimention + i] = pp.mat[i] * v.x + pp.mat[4 + i] * v.y + pp.mat[8 + i] * v.z + pp.mat[12 + i];
+	}
 }
 
 void Project::forward(ProjectParams& pp) {
-	void* args[] = { &pp };
+	void* args[] = { &pp.kernel };
 	cudaLaunchKernel(ProjectionForwardKernel, pp.grid, pp.block, args, 0, NULL);
-	cudaMemcpy(pp.host_out, pp.out, pp.size * 4 * sizeof(float), cudaMemcpyDeviceToHost);
 }
 
-void Project::init(ProjectParams& pp, Attribute& pos, float* dLdout) {
-	pp.dLdout = dLdout;
-	cudaMalloc(&pp.gradPos, pos.vboNum * pos.dimention* sizeof(float));
+void Project::init(ProjectParams& pp, Attribute& vec, float* dLdout) {
+	pp.grad.out = dLdout;
+	cudaMalloc(&pp.grad.vec, vec.vboNum * 3* sizeof(float));
 }
 
-__global__ void ProjectionBackwardKernel(const ProjectParams pp) {
+__global__ void ProjectionBackwardKernel(const ProjectKernelParams pp, const ProjectGradParams grad) {
 	int pidx = blockIdx.x * blockDim.x + threadIdx.x;
 
-	if (pidx > pp.size)return;
-	float4 v = ((float4*)pp.dLdout)[pidx];
-	pp.gradPos[pidx * 3] = pp.mat[0] * v.x + pp.mat[1] * v.y + pp.mat[2] * v.z + pp.mat[3] * v.w;
-	pp.gradPos[pidx * 3 + 1] = pp.mat[4] * v.x + pp.mat[5] * v.y + pp.mat[6] * v.z + pp.mat[7] * v.w;
-	pp.gradPos[pidx * 3 + 2] = pp.mat[8] * v.x + pp.mat[9] * v.y + pp.mat[10] * v.z + pp.mat[11] * v.w;
+	if (pidx >= pp.size)return;
+	for (int i = 0; i < pp.dimention; i++) {
+		grad.vec[pidx * 3] += pp.mat[i] * grad.out[pidx * pp.dimention + i];
+		grad.vec[pidx * 3 + 1] += pp.mat[4 + i] * grad.out[pidx * pp.dimention + i];
+		grad.vec[pidx * 3 + 2] += pp.mat[8 + i] * grad.out[pidx * pp.dimention + i];
+	}
 }
 
 void Project::backward(ProjectParams& pp) {
-	void* args[] = { &pp };
+	cudaMemset(pp.grad.vec, 0, pp.kernel.size * 3 * sizeof(float));
+	void* args[] = { &pp.kernel,&pp.grad };
 	cudaLaunchKernel(ProjectionBackwardKernel, pp.grid, pp.block, args, 0, NULL);
 }

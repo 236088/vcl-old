@@ -62,9 +62,9 @@ struct AdamParams : OptimizeParams {
 
 class Adam : Optimizer {
 public:
-	static void init(AdamParams& adam, double rhom, double rhov, double eta, double eps);
-	static void init(AdamParams& adam, float* param, float* grad, int size, int width, int height, int depth, double rhom, double rhov, double eta, double eps);
-	static void init(AdamParams& adam, Attribute& attr, float* grad, double rhom, double rhov, double eta, double eps);
+	static void init(AdamParams& adam,double eta,  double rhom, double rhov, double eps);
+	static void init(AdamParams& adam, float* param, float* grad, int size, int width, int height, int depth, double eta, double rhom, double rhov, double eps);
+	static void init(AdamParams& adam, Attribute& attr, float* grad, double eta,  double rhom, double rhov,double eps);
 	static void step(AdamParams& adam);
 };
 

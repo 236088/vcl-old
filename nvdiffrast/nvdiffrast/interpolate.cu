@@ -1,45 +1,53 @@
 #include "interpolate.h"
 
 void Interpolate::init(InterpolateParams& ip, RenderingParams& p, RasterizeParams& rp, Attribute& attr) {
-    ip.enableDA = rp.enableDB;
-    ip.rast = rp.out;
+    ip.kernel.width = p.width;
+    ip.kernel.height = p.height;
+    ip.kernel.depth = p.depth;
+    ip.kernel.enableDA = rp.kernel.enableDB;
+    ip.kernel.rast = rp.kernel.out;
     ip.attrNum = attr.vboNum;
     ip.idxNum = attr.vaoNum;
-    ip.dimention = attr.dimention;
-    ip.attr = attr.vbo;
-    ip.idx = attr.vao;
+    ip.kernel.dimention = attr.dimention;
+    ip.kernel.attr = attr.vbo;
+    ip.kernel.idx = attr.vao;
 
-    cudaMalloc(&ip.out, p.width * p.height * attr.dimention * sizeof(float));
-
-    if (ip.enableDA) {
-        ip.rastDB = rp.outDB;
-        cudaMalloc(&ip.outDA, p.width * p.height * attr.dimention * 2 * sizeof(float));
+    cudaMalloc(&ip.kernel.out, p.width * p.height * attr.dimention * sizeof(float));
+    if (ip.kernel.enableDA) {
+        ip.kernel.rastDB = rp.kernel.outDB;
+        cudaMalloc(&ip.kernel.outDA, p.width * p.height * attr.dimention * 2 * sizeof(float));
     }
+    ip.block = getBlock(p.width, p.height);
+    ip.grid = getGrid(ip.block, p.width, p.height);
 }
 
 void Interpolate::init(InterpolateParams& ip, RenderingParams& p, RasterizeParams& rp, Attribute& attr, ProjectParams& pp) {
-    ip.enableDA = rp.enableDB;
-    ip.rast = rp.out;
-    ip.attrNum = attr.vboNum;
+    ip.kernel.width = p.width;
+    ip.kernel.height = p.height;
+    ip.kernel.depth = p.depth;
+    ip.kernel.enableDA = rp.kernel.enableDB;
+    ip.kernel.rast = rp.kernel.out;
+    ip.kernel.attr = pp.kernel.out;
+    ip.attrNum = pp.kernel.size;
+    ip.kernel.dimention = pp.kernel.dimention;
+    ip.kernel.idx = attr.vao;
     ip.idxNum = attr.vaoNum;
-    ip.dimention = 4;
-    ip.attr = pp.out;
-    ip.idx = attr.vao;
 
-    cudaMalloc(&ip.out, p.width * p.height * 4 * sizeof(float));
-
-    if (ip.enableDA) {
-        ip.rastDB = rp.outDB;
-        cudaMalloc(&ip.outDA, p.width * p.height * 4 * 2 * sizeof(float));
+    cudaMalloc(&ip.kernel.out, p.width * p.height * pp.kernel.dimention * sizeof(float));
+    if (ip.kernel.enableDA) {
+        ip.kernel.rastDB = rp.kernel.outDB;
+        cudaMalloc(&ip.kernel.outDA, p.width * p.height * pp.kernel.dimention * 2 * sizeof(float));
     }
+    ip.block = getBlock(p.width, p.height);
+    ip.grid = getGrid(ip.block, p.width, p.height);
 }
 
-__global__ void InterplateForwardKernel(const InterpolateParams ip, const RenderingParams p) {
+__global__ void InterplateForwardKernel(const InterpolateKernelParams ip) {
     int px = blockIdx.x * blockDim.x + threadIdx.x;
     int py = blockIdx.y * blockDim.y + threadIdx.y;
     int pz = blockIdx.z;
-    if (px >= p.width || py >= p.height || pz >= p.depth)return;
-    int pidx = px + p.width * (py + p.height * pz);
+    if (px >= ip.width || py >= ip.height || pz >= ip.depth)return;
+    int pidx = px + ip.width * (py + ip.height * pz);
 
     float4 r = ((float4*)ip.rast)[pidx];
     int idx = (int)r.w - 1;
@@ -65,27 +73,25 @@ __global__ void InterplateForwardKernel(const InterpolateParams ip, const Render
     }
 }
 
-void Interpolate::forward(InterpolateParams& ip, RenderingParams& p) {
-    cudaMemset(ip.out, 0, p.width * p.height * ip.dimention * sizeof(float));
-    if (ip.enableDA) {
-        cudaMemset(ip.outDA, 0, p.width * p.height * ip.dimention * 2 * sizeof(float));
+void Interpolate::forward(InterpolateParams& ip) {
+    cudaMemset(ip.kernel.out, 0, ip.kernel.width * ip.kernel.height * ip.kernel.dimention * sizeof(float));
+    if (ip.kernel.enableDA) {
+        cudaMemset(ip.kernel.outDA, 0, ip.kernel.width * ip.kernel.height * ip.kernel.dimention * 2 * sizeof(float));
     }
-    void* args[] = { &ip, &p };
-    cudaLaunchKernel(InterplateForwardKernel, p.grid, p.block, args, 0, NULL);
-}
-
-void Interpolate::init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout, float* dLdda) {
-    ip.dLdout = dLdout;
-    ip.dLdda = dLdda;
-    cudaMalloc(&ip.gradAttr, ip.attrNum * ip.dimention * sizeof(float));
-    cudaMalloc(&ip.gradRast, p.width * p.height * 4 * sizeof(float));
-    cudaMalloc(&ip.gradRastDB, p.width * p.height * 4 * sizeof(float));
+    void* args[] = { &ip.kernel };
+    cudaLaunchKernel(InterplateForwardKernel, ip.grid, ip.block, args, 0, NULL);
 }
 
 void Interpolate::init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout) {
-    ip.dLdout = dLdout;
-    cudaMalloc(&ip.gradAttr, ip.attrNum * ip.dimention * sizeof(float));
-    cudaMalloc(&ip.gradRast, p.width * p.height * 4 * sizeof(float));
+    ip.grad.out = dLdout;
+    cudaMalloc(&ip.grad.attr, ip.attrNum * ip.kernel.dimention * sizeof(float));
+    cudaMalloc(&ip.grad.rast, ip.kernel.width * ip.kernel.height * 4 * sizeof(float));
+}
+
+void Interpolate::init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout, float* dLdda) {
+    init(ip, p, attr, dLdout);
+    ip.grad.outDA = dLdda;
+    cudaMalloc(&ip.grad.rastDB, p.width * p.height * 4 * sizeof(float));
 }
 
 // a = u * (a0 - a2) + v * (a1 - a2) + a2
@@ -110,17 +116,17 @@ void Interpolate::init(InterpolateParams& ip, RenderingParams& p, Attribute& att
 // dL/da2 = dL/d(da/dx) * d(da/dx)/da2 + dL/d(da/dy) * d(da/dy)/da2
 //        = -dL/d(da/dx) * du/dx - dL/d(da/dy) * du/dy - dL/d(da/dx) * dv/dx - dL/d(da/dy) * dv/dy = -dL/da0 - dL/da1
 
-__global__ void InterpolateBackwardKernel(const InterpolateParams ip, const RenderingParams p) {
+__global__ void InterpolateBackwardKernel(const InterpolateKernelParams ip, const InterpolateGradParams grad) {
     int px = blockIdx.x * blockDim.x + threadIdx.x;
     int py = blockIdx.y * blockDim.y + threadIdx.y;
     int pz = blockIdx.z;
-    if (px >= p.width || py >= p.height || pz >= p.depth)return;
-    int pidx = px + p.width * (py + p.height * pz);
+    if (px >= ip.width || py >= ip.height || pz >= ip.depth)return;
+    int pidx = px + ip.width * (py + ip.height * pz);
 
     float4 r = ((float4*)ip.rast)[pidx];
     int idx = (int)r.w - 1;
     if (idx < 0) {
-        ((float2*)ip.gradRast)[pidx] = make_float2(0.0, 0.0);
+        ((float2*)grad.rast)[pidx] = make_float2(0.0, 0.0);
         return;
     }
 
@@ -130,18 +136,18 @@ __global__ void InterpolateBackwardKernel(const InterpolateParams ip, const Rend
     float gu = 0;
     float gv = 0;
     for (int i = 0; i < ip.dimention; i++) {
-        float dLdout = ip.dLdout[pidx * ip.dimention + i];
-        atomicAdd(&ip.gradAttr[idx0 * ip.dimention + i], dLdout * r.x);
-        atomicAdd(&ip.gradAttr[idx1 * ip.dimention + i], dLdout * r.y);
-        atomicAdd(&ip.gradAttr[idx2 * ip.dimention + i], dLdout * (1.0 - r.x - r.y));
+        float dLdout = grad.out[pidx * ip.dimention + i];
+        atomicAdd(&grad.attr[idx0 * ip.dimention + i], dLdout * r.x);
+        atomicAdd(&grad.attr[idx1 * ip.dimention + i], dLdout * r.y);
+        atomicAdd(&grad.attr[idx2 * ip.dimention + i], dLdout * (1.0 - r.x - r.y));
         gu += dLdout * (ip.attr[idx0 * ip.dimention + i] - ip.attr[idx2 * ip.dimention + i]);
         gv += dLdout * (ip.attr[idx1 * ip.dimention + i] - ip.attr[idx2 * ip.dimention + i]);
     }
-    ((float2*)ip.gradRast)[pidx] = make_float2(gu, gv);
+    ((float2*)grad.rast)[pidx] = make_float2(gu, gv);
 }
 
-void Interpolate::backward(InterpolateParams& ip, RenderingParams& p) {
-    cudaMemset(ip.gradAttr, 0, ip.attrNum * ip.dimention * sizeof(float));
-    void* args[] = { &ip, &p };
-    cudaLaunchKernel(InterpolateBackwardKernel, p.grid, p.block, args, 0, NULL);
+void Interpolate::backward(InterpolateParams& ip) {
+    cudaMemset(ip.grad.attr, 0, ip.attrNum * ip.kernel.dimention * sizeof(float));
+    void* args[] = { &ip.kernel,&ip.grad};
+    cudaLaunchKernel(InterpolateBackwardKernel, ip.grid, ip.block, args, 0, NULL);
 }

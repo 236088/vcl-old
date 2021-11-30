@@ -1,38 +1,44 @@
 #include "common.h"
 #include "texturemap.h"
 
-void Texturemap::init(TexturemapParams& tp, RenderingParams& p, RasterizeParams& rp, InterpolateParams& ip, int width, int height, int channel, int miplevel) {
-	tp.miplevel = miplevel < TEX_MAX_MIP_LEVEL ? miplevel : TEX_MAX_MIP_LEVEL;
-	if(((width >> tp.miplevel) << tp.miplevel) != width || ((height >> tp.miplevel) << tp.miplevel) != height){
+void Texturemap::init(TexturemapParams& tp, RenderingParams& p, RasterizeParams& rp, InterpolateParams& ip, int texwidth, int texheight, int channel, int miplevel) {
+	miplevel = miplevel < TEX_MAX_MIP_LEVEL ? miplevel : TEX_MAX_MIP_LEVEL;
+	if(((texwidth >> miplevel) << miplevel) != texwidth || ((texheight >> miplevel) << miplevel) != texheight){
 		printf("Invalid miplevel value");
 		exit(1);
 	}
-	tp.width = width;
-	tp.height = height;
-	tp.channel = channel;
-	tp.rast = rp.out;
-	tp.uv = ip.out;
-	tp.uvDA = ip.outDA;
-	tp.block = getBlock(tp.width, tp.height);
-	tp.grid = getGrid(tp.block, tp.width, tp.height);
+	tp.kernel.width = p.width;
+	tp.kernel.height = p.height;
+	tp.kernel.depth = p.depth;
+	tp.kernel.texwidth = texwidth;
+	tp.kernel.texheight = texheight;
+	tp.kernel.channel = channel;
+	tp.kernel.miplevel = miplevel;
+	tp.kernel.rast = rp.kernel.out;
+	tp.kernel.uv = ip.kernel.out;
+	tp.kernel.uvDA = ip.kernel.outDA;
+	tp.texblock = getBlock(texwidth, texheight);
+	tp.texgrid = getGrid(tp.texblock, texwidth, texheight);
+	tp.block = getBlock(p.width, p.height);
+	tp.grid = getGrid(tp.block, p.width, p.height);
 
-	int w = width, h = height;
+	int w = texwidth, h = texheight;
 	for (int i = 0; i < miplevel; i++) {
-		cudaMalloc(&tp.miptex[i], w * h * channel * sizeof(float));
+		cudaMalloc(&tp.kernel.texture[i], w * h * channel * sizeof(float));
 		w >>= 1; h >>= 1;
 	}
-	cudaMalloc(&tp.out, p.width * p.height * channel * sizeof(float));
+	cudaMalloc(&tp.kernel.out, p.width * p.height * channel * sizeof(float));
 }
 
-__global__ void bmpUcharToFloat(unsigned char* data, const TexturemapParams tp) {
+__global__ void bmpUcharToFloat(unsigned char* data, const TexturemapKernelParams tp) {
 	int px = blockIdx.x * blockDim.x + threadIdx.x;
 	int py = blockIdx.y * blockDim.y + threadIdx.y;
 	int pz = blockIdx.z;
-	if (px >= tp.width || py >= tp.height)return;
-	int pidx = px + tp.width * (py + tp.height * pz);
+	if (px >= tp.texwidth || py >= tp.texheight)return;
+	int pidx = px + tp.texwidth * (py + tp.texheight * pz);
 
 	for (int i = 0; i < tp.channel; i++) {
-		tp.miptex[0][pidx * tp.channel + i] = (float)data[pidx * tp.channel + 2 - i] / 255.f;
+		tp.texture[0][pidx * tp.channel + i] = (float)data[pidx * tp.channel + 2 - i] / 255.f;
 	}
 }
 
@@ -52,14 +58,14 @@ void Texturemap::loadBMP(TexturemapParams& tp, const char* path) {
 		printf("Not a correct BMP file\n");
 		return;
 	}
-	if (*(int*)&(header[0x12]) != tp.width || *(int*)&(header[0x16]) != tp.height) {
+	if (*(int*)&(header[0x12]) != tp.kernel.texwidth || *(int*)&(header[0x16]) != tp.kernel.texheight) {
 		printf("Not match texWidth or texHeight value\n");
 		return;
 	}
 	unsigned int dataPos = *(int*)&(header[0x0A]);
 	unsigned int imageSize = *(int*)&(header[0x22]);
 
-	if (imageSize == 0)    imageSize = tp.width * tp.height * tp.channel;
+	if (imageSize == 0)    imageSize = tp.kernel.texwidth * tp.kernel.texheight * tp.kernel.channel;
 	if (dataPos == 0)      dataPos = 54;
 	fseek(file, dataPos, SEEK_SET);
 
@@ -69,15 +75,15 @@ void Texturemap::loadBMP(TexturemapParams& tp, const char* path) {
 
 	unsigned char* dev_data;
 
-	cudaMalloc(&dev_data, tp.width * tp.height * tp.channel * sizeof(unsigned char));
-	cudaMemcpy(dev_data, data, tp.width * tp.height * tp.channel * sizeof(unsigned char), cudaMemcpyHostToDevice);
+	cudaMalloc(&dev_data, tp.kernel.texwidth * tp.kernel.texheight * tp.kernel.channel * sizeof(unsigned char));
+	cudaMemcpy(dev_data, data, tp.kernel.texwidth * tp.kernel.texheight * tp.kernel.channel * sizeof(unsigned char), cudaMemcpyHostToDevice);
 
-	void* args[] = { &dev_data,&tp };
-	cudaLaunchKernel(bmpUcharToFloat, tp.grid, tp.block, args, 0, NULL);
+	void* args[] = { &dev_data,&tp.kernel };
+	cudaLaunchKernel(bmpUcharToFloat, tp.texgrid, tp.texblock, args, 0, NULL);
 	cudaFree(dev_data);
 }
 
-__global__ void downSampling(const TexturemapParams tp, int index, int width, int height) {
+__global__ void downSampling(const TexturemapKernelParams tp, int index, int width, int height) {
 	int px = blockIdx.x * blockDim.x + threadIdx.x;
 	int py = blockIdx.y * blockDim.y + threadIdx.y;
 	int pz = blockIdx.z;
@@ -91,21 +97,21 @@ __global__ void downSampling(const TexturemapParams tp, int index, int width, in
 	int p11idx = p10idx + 1;
 
 	for (int i = 0; i < tp.channel; i++) {
-		float p00 = tp.miptex[index - 1][p00idx * tp.channel + i];
-		float p01 = tp.miptex[index - 1][p01idx * tp.channel + i];
-		float p10 = tp.miptex[index - 1][p10idx * tp.channel + i];
-		float p11 = tp.miptex[index - 1][p11idx * tp.channel + i];
+		float p00 = tp.texture[index - 1][p00idx * tp.channel + i];
+		float p01 = tp.texture[index - 1][p01idx * tp.channel + i];
+		float p10 = tp.texture[index - 1][p10idx * tp.channel + i];
+		float p11 = tp.texture[index - 1][p11idx * tp.channel + i];
 
 		float p = (p00 + p01 + p10 + p11) * 0.25f;
-		tp.miptex[index][pidx * tp.channel + i] = p;
+		tp.texture[index][pidx * tp.channel + i] = p;
 	}
 }
 
 void Texturemap::buildMipTexture(TexturemapParams& tp) {
-	int w = tp.width, h = tp.height;
+	int w = tp.kernel.texwidth, h = tp.kernel.texheight;
 	int i = 0;
-	void* args[] = { &tp, &i, &w, &h };
-	for (i = 1; i < tp.miplevel; i++) {
+	void* args[] = { &tp.kernel, &i, &w, &h };
+	for (i = 1; i < tp.kernel.miplevel; i++) {
 		w >>= 1; h >>= 1;
 		dim3 block = getBlock(w, h);
 		dim3 grid = getGrid(block, w, h);
@@ -113,8 +119,8 @@ void Texturemap::buildMipTexture(TexturemapParams& tp) {
 	}
 }
 
-__device__ __forceinline__ int4 indexFetch(const TexturemapParams tp, int level, float2 uv, float2& t) {
-	int2 size = make_int2(tp.width >> level, tp.height >> level);
+__device__ __forceinline__ int4 indexFetch(const TexturemapKernelParams tp, int level, float2 uv, float2& t) {
+	int2 size = make_int2(tp.texwidth >> level, tp.texheight >> level);
 	t.x = uv.x * (float)size.x;
 	t.y = uv.y * (float)size.y;
 	int u0 = t.x<0 ? 0 : t.x>size.x - 1 ? size.x - 1 : (int)t.x;
@@ -131,20 +137,20 @@ __device__ __forceinline__ int4 indexFetch(const TexturemapParams tp, int level,
 	return idx;
 }
 
-__global__ void TexturemapForwardKernel(const TexturemapParams tp, const RenderingParams p) {
+__global__ void TexturemapForwardKernel(const TexturemapKernelParams tp) {
 	int px = blockIdx.x * blockDim.x + threadIdx.x;
 	int py = blockIdx.y * blockDim.y + threadIdx.y;
 	int pz = blockIdx.z;
-	if (px >= p.width || py >= p.height || pz >= p.depth)return;
-	int pidx = px + p.width * (py + p.height * pz);
+	if (px >= tp.width || py >= tp.height || pz >= tp.depth)return;
+	int pidx = px + tp.width * (py + tp.height * pz);
 
 	if (tp.rast[pidx * 4 + 3] < 1.f) return;
 
 	float4 uvDA = ((float4*)tp.uvDA)[pidx];
-	float dsdx = uvDA.x * tp.width;
-	float dsdy = uvDA.y * tp.width;
-	float dtdx = uvDA.z * tp.height;
-	float dtdy = uvDA.w * tp.height;
+	float dsdx = uvDA.x * tp.texwidth;
+	float dsdy = uvDA.y * tp.texwidth;
+	float dtdx = uvDA.z * tp.texheight;
+	float dtdy = uvDA.w * tp.texheight;
 
 	// calculate footprint
 	// b is sum of 2 square sides 
@@ -172,42 +178,42 @@ __global__ void TexturemapForwardKernel(const TexturemapParams tp, const Renderi
 	int4 idx1 = indexFetch(tp, level1, uv, uv1);
 	for (int i = 0; i < tp.channel; i++) {
 		float out = bilerp(
-			tp.miptex[level0][idx0.x * tp.channel + i], tp.miptex[level0][idx0.y * tp.channel + i],
-			tp.miptex[level0][idx0.z * tp.channel + i], tp.miptex[level0][idx0.w * tp.channel + i], uv0);
+			tp.texture[level0][idx0.x * tp.channel + i], tp.texture[level0][idx0.y * tp.channel + i],
+			tp.texture[level0][idx0.z * tp.channel + i], tp.texture[level0][idx0.w * tp.channel + i], uv0);
 		if (flevel > 0) {
 			float out1 = bilerp(
-				tp.miptex[level1][idx1.x * tp.channel + i], tp.miptex[level1][idx1.y * tp.channel + i],
-				tp.miptex[level1][idx1.z * tp.channel + i], tp.miptex[level1][idx1.w * tp.channel + i], uv1);
+				tp.texture[level1][idx1.x * tp.channel + i], tp.texture[level1][idx1.y * tp.channel + i],
+				tp.texture[level1][idx1.z * tp.channel + i], tp.texture[level1][idx1.w * tp.channel + i], uv1);
 			out = lerp(out, out1, flevel);
 		}
 		tp.out[pidx * tp.channel + i] = out;
 	}
 }
 
-void Texturemap::forward(TexturemapParams& tp, RenderingParams& p) {
-	cudaMemset(tp.out, 0, p.width * p.height * tp.channel * sizeof(float));
-	void* args[] = { &tp,&p };
-	cudaLaunchKernel(TexturemapForwardKernel, p.grid, p.block, args, 0, NULL);
+void Texturemap::forward(TexturemapParams& tp) {
+	cudaMemset(tp.kernel.out, 0, tp.kernel.width * tp.kernel.height * tp.kernel.channel * sizeof(float));
+	void* args[] = { &tp.kernel };
+	cudaLaunchKernel(TexturemapForwardKernel, tp.grid, tp.block, args, 0, NULL);
 }
 
 void Texturemap::init(TexturemapParams& tp, RenderingParams& p, float* dLdout) {
-	tp.dLdout = dLdout;
-	cudaMalloc(&tp.gradUV, p.height * p.height * 2 * sizeof(float));
-	cudaMalloc(&tp.gradUVDA, p.height * p.height * 4 * sizeof(float));
+	tp.grad.out = dLdout;
+	cudaMalloc(&tp.grad.uv, p.height * p.height * 2 * sizeof(float));
+	cudaMalloc(&tp.grad.uvDA, p.height * p.height * 4 * sizeof(float));
 
-	int w = tp.width, h = tp.height;
-	for (int i = 0; i < tp.miplevel; i++) {
-		cudaMalloc(&tp.gradMipTex[i], w * h * tp.channel * sizeof(float));
+	int w = tp.kernel.texwidth, h = tp.kernel.texheight;
+	for (int i = 0; i < tp.kernel.miplevel; i++) {
+		cudaMalloc(&tp.grad.texture[i], w * h * tp.kernel.channel * sizeof(float));
 		w >>= 1; h >>= 1;
 	}
 }
 
-__device__ __forceinline__ void calculateLevel(const TexturemapParams tp, int pidx, int& level0, int& level1, float& flevel, float4& dleveldda) {
+__device__ __forceinline__ void calculateLevel(const TexturemapKernelParams tp, int pidx, int& level0, int& level1, float& flevel, float4& dleveldda) {
 	float4 uvDA = ((float4*)tp.uvDA)[pidx];
-	float dsdx = uvDA.x * tp.width;
-	float dsdy = uvDA.y * tp.width;
-	float dtdx = uvDA.z * tp.height;
-	float dtdy = uvDA.w * tp.height;
+	float dsdx = uvDA.x * tp.texwidth;
+	float dsdy = uvDA.y * tp.texwidth;
+	float dtdx = uvDA.z * tp.texheight;
+	float dtdy = uvDA.w * tp.texheight;
 
 	float s2 = dsdx * dsdx + dsdy * dsdy;
 	float t2 = dtdx * dtdx + dtdy * dtdy;
@@ -271,15 +277,15 @@ __device__ __forceinline__ void calculateLevel(const TexturemapParams tp, int pi
 // dlevel/d(dt/dx) = 1/2ln2/(b * sqrt(b^2-a^2) + (b^2-a^2)) * ((sqrt(b^2-a^2) + b) * dt/dx + a * ds/dy)
 // dlevel/d(dt/dy) = 1/2ln2/(b * sqrt(b^2-a^2) + (b^2-a^2)) * ((sqrt(b^2-a^2) + b) * dt/dy - a * ds/dx)
 //
-__global__ void TexturemapBackwardKernel(const TexturemapParams tp, const RenderingParams p) {
+__global__ void TexturemapBackwardKernel(const TexturemapKernelParams tp, const TexturemapGradParams grad) {
 	int px = blockIdx.x * blockDim.x + threadIdx.x;
 	int py = blockIdx.y * blockDim.y + threadIdx.y;
 	int pz = blockIdx.z;
-	if (px >= p.width || py >= p.height || pz >= p.depth)return;
-	int pidx = px + p.width * (py + p.height * pz);
+	if (px >= tp.width || py >= tp.height || pz >= tp.depth)return;
+	int pidx = px + tp.width * (py + tp.height * pz);
 	if (tp.rast[pidx * 4 + 3] < 1.f) {
-		((float2*)tp.gradUV)[pidx] = make_float2(0.f, 0.f);
-		((float4*)tp.gradUVDA)[pidx] = make_float4(0.f, 0.f, 0.f, 0.f);
+		((float2*)grad.uv)[pidx] = make_float2(0.f, 0.f);
+		((float4*)grad.uvDA)[pidx] = make_float4(0.f, 0.f, 0.f, 0.f);
 		return;
 	}
 	int level0 = 0, level1 = 0;
@@ -292,41 +298,41 @@ __global__ void TexturemapBackwardKernel(const TexturemapParams tp, const Render
 	int4 idx1 = indexFetch(tp, level1, uv, uv1);
 
 	for (int i = 0; i < tp.channel; i++) {
-		float dLdout = tp.dLdout[pidx * tp.channel + i];
-		atomicAdd(&tp.gradMipTex[level0][idx0.x * tp.channel + i], (1.f - flevel) * (1.f - uv0.x) * (1.f - uv0.y) * dLdout);
-		atomicAdd(&tp.gradMipTex[level0][idx0.y * tp.channel + i], (1.f - flevel) * uv0.x * (1.f - uv0.y) * dLdout);
-		atomicAdd(&tp.gradMipTex[level0][idx0.z * tp.channel + i], (1.f - flevel) * (1.f - uv0.x) * uv0.y * dLdout);
-		atomicAdd(&tp.gradMipTex[level0][idx0.w * tp.channel + i], (1.f - flevel) * uv0.x * uv0.y * dLdout);
-		float t00 = tp.miptex[level0][idx0.x * tp.channel + i];
-		float t01 = tp.miptex[level0][idx0.y * tp.channel + i];
-		float t10 = tp.miptex[level0][idx0.z * tp.channel + i];
-		float t11 = tp.miptex[level0][idx0.w * tp.channel + i];
+		float dLdout = grad.out[pidx * tp.channel + i];
+		atomicAdd(&grad.texture[level0][idx0.x * tp.channel + i], (1.f - flevel) * (1.f - uv0.x) * (1.f - uv0.y) * dLdout);
+		atomicAdd(&grad.texture[level0][idx0.y * tp.channel + i], (1.f - flevel) * uv0.x * (1.f - uv0.y) * dLdout);
+		atomicAdd(&grad.texture[level0][idx0.z * tp.channel + i], (1.f - flevel) * (1.f - uv0.x) * uv0.y * dLdout);
+		atomicAdd(&grad.texture[level0][idx0.w * tp.channel + i], (1.f - flevel) * uv0.x * uv0.y * dLdout);
+		float t00 = tp.texture[level0][idx0.x * tp.channel + i];
+		float t01 = tp.texture[level0][idx0.y * tp.channel + i];
+		float t10 = tp.texture[level0][idx0.z * tp.channel + i];
+		float t11 = tp.texture[level0][idx0.w * tp.channel + i];
 
-		float u = lerp(t01 - t00, t11 - t10, uv0.y) * (tp.width >> level0);
-		float v = lerp(t10 - t00, t11 - t01, uv0.x) * (tp.height >> level0);
+		float u = lerp(t01 - t00, t11 - t10, uv0.y) * (tp.texwidth >> level0);
+		float v = lerp(t10 - t00, t11 - t01, uv0.x) * (tp.texheight >> level0);
 		if (flevel > 0) {
 			float l = bilerp(t00, t01, t10, t11, uv0);
-			atomicAdd(&tp.gradMipTex[level1][idx1.x * tp.channel + i], flevel * (1.f - uv1.x) * (1.f - uv1.y) * dLdout);
-			atomicAdd(&tp.gradMipTex[level1][idx1.y * tp.channel + i], flevel * uv1.x * (1.f - uv1.y) * dLdout);
-			atomicAdd(&tp.gradMipTex[level1][idx1.z * tp.channel + i], flevel * (1.f - uv1.x) * uv1.y * dLdout);
-			atomicAdd(&tp.gradMipTex[level1][idx1.w * tp.channel + i], flevel * uv1.x * uv1.y * dLdout);
-			t00 = tp.miptex[level1][idx1.x * tp.channel + i];
-			t01 = tp.miptex[level1][idx1.y * tp.channel + i];
-			t10 = tp.miptex[level1][idx1.z * tp.channel + i];
-			t11 = tp.miptex[level1][idx1.w * tp.channel + i];
-			u = lerp(u, lerp(t01 - t00, t11 - t10, uv1.y) * (tp.width >> level1), flevel);
-			v = lerp(v, lerp(t10 - t00, t11 - t01, uv1.x) * (tp.height >> level1), flevel);
+			atomicAdd(&grad.texture[level1][idx1.x * tp.channel + i], flevel * (1.f - uv1.x) * (1.f - uv1.y) * dLdout);
+			atomicAdd(&grad.texture[level1][idx1.y * tp.channel + i], flevel * uv1.x * (1.f - uv1.y) * dLdout);
+			atomicAdd(&grad.texture[level1][idx1.z * tp.channel + i], flevel * (1.f - uv1.x) * uv1.y * dLdout);
+			atomicAdd(&grad.texture[level1][idx1.w * tp.channel + i], flevel * uv1.x * uv1.y * dLdout);
+			t00 = tp.texture[level1][idx1.x * tp.channel + i];
+			t01 = tp.texture[level1][idx1.y * tp.channel + i];
+			t10 = tp.texture[level1][idx1.z * tp.channel + i];
+			t11 = tp.texture[level1][idx1.w * tp.channel + i];
+			u = lerp(u, lerp(t01 - t00, t11 - t10, uv1.y) * (tp.texwidth >> level1), flevel);
+			v = lerp(v, lerp(t10 - t00, t11 - t01, uv1.x) * (tp.texheight >> level1), flevel);
 			gl += (bilerp(t00, t01, t10, t11, uv1) - l) * dLdout;
 		}
 		gu += u * dLdout;
 		gv += v * dLdout;
 	}
 
-	((float2*)tp.gradUV)[pidx] = make_float2(gu, gv);
-	((float4*)tp.gradUVDA)[pidx] = gl * dleveldda;
+	((float2*)grad.uv)[pidx] = make_float2(gu, gv);
+	((float4*)grad.uvDA)[pidx] = gl * dleveldda;
 }
 
-__global__ void gardAddThrough(const TexturemapParams tp, int index, int width, int height) {
+__global__ void gardAddThrough(const TexturemapKernelParams tp, const TexturemapGradParams grad,int index, int width, int height) {
 	int px = blockIdx.x * blockDim.x + threadIdx.x;
 	int py = blockIdx.y * blockDim.y + threadIdx.y;
 	int pz = blockIdx.z;
@@ -340,19 +346,19 @@ __global__ void gardAddThrough(const TexturemapParams tp, int index, int width, 
 	int p11idx = p10idx + 1;
 
 	for (int i = 0; i < tp.channel; i++) {
-		float g = tp.gradMipTex[index][pidx * tp.channel + i];
-		AddNaNcheck(tp.gradMipTex[index - 1][p00idx * tp.channel + i], g);
-		AddNaNcheck(tp.gradMipTex[index - 1][p01idx * tp.channel + i], g);
-		AddNaNcheck(tp.gradMipTex[index - 1][p10idx * tp.channel + i], g);
-		AddNaNcheck(tp.gradMipTex[index - 1][p11idx * tp.channel + i], g);
+		float g = grad.texture[index][pidx * tp.channel + i];
+		AddNaNcheck(grad.texture[index - 1][p00idx * tp.channel + i], g);
+		AddNaNcheck(grad.texture[index - 1][p01idx * tp.channel + i], g);
+		AddNaNcheck(grad.texture[index - 1][p10idx * tp.channel + i], g);
+		AddNaNcheck(grad.texture[index - 1][p11idx * tp.channel + i], g);
 	}
 }
 
 void gradSum(TexturemapParams& tp) {
-	int w = tp.width >> tp.miplevel; int h = tp.height >> tp.miplevel;
+	int w = tp.kernel.texwidth >> tp.kernel.miplevel; int h = tp.kernel.texheight >> tp.kernel.miplevel;
 	int i = 0;
-	void* args[] = { &tp, &i, &w, &h };
-	for (i = tp.miplevel - 1; i > 0; i--) {
+	void* args[] = { &tp.kernel, &tp.grad, &i, &w, &h };
+	for (i = tp.kernel.miplevel - 1; i > 0; i--) {
 		w <<= 1; h <<= 1;
 		dim3 block = getBlock(w, h);
 		dim3 grid = getGrid(block, w, h);
@@ -360,14 +366,14 @@ void gradSum(TexturemapParams& tp) {
 	}
 }
 
-void Texturemap::backward(TexturemapParams& tp, RenderingParams& p) {
-	int w = tp.width, h = tp.height;
-	for (int i = 0; i < tp.miplevel; i++) {
-		cudaMemset(tp.gradMipTex[i], 0, w * h * tp.channel * sizeof(float));
+void Texturemap::backward(TexturemapParams& tp) {
+	int w = tp.kernel.texwidth, h = tp.kernel.texheight;
+	for (int i = 0; i < tp.kernel.miplevel; i++) {
+		cudaMemset(tp.grad.texture[i], 0, w * h * tp.kernel.channel * sizeof(float));
 		w >>= 1; h >>= 1;
 	}
-	void* args[] = { &tp, &p };
-	cudaLaunchKernel(TexturemapBackwardKernel, p.grid, p.block, args, 0, NULL);
+	void* args[] = { &tp.kernel, &tp.grad };
+	cudaLaunchKernel(TexturemapBackwardKernel, tp.grid, tp.block, args, 0, NULL);
 	gradSum(tp);
 	buildMipTexture(tp);
 }

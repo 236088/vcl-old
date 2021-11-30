@@ -1,12 +1,11 @@
 #include "preset.h"
 #include <ctime>
 
-//PresetNNEarth preset;
 //PresetFilter preset;
-PresetMaterial preset;
+//PresetMaterial preset;
 //PresetEarth preset;
 //PresetCube preset;
-//PresetPrimitives preset;
+PresetPrimitives preset;
 
 struct timespec pre, cur;
 double t;

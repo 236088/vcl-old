@@ -10,15 +10,19 @@
 #include "material.h"
 #include "antialias.h"
 #include "filter.h"
-#include "nn.h"
 
-struct RenderBuffer {
-	GLuint buffer;
-	float* pixels;
+struct GLbuffer {
+	GLuint id;
+	float* gl_buffer;
+	float* buffer;
+	int width;
+	int height;
+	int channel;
+	static void init(GLbuffer& rb, float* buffer, int width, int height, int channel, int attachmentNum);
+	static void draw(GLbuffer& rb, GLint internalformat, GLenum format, float minX, float minY, float maxX, float maxY);
 };
 
-void drawBufferInit(RenderBuffer& rb, RenderingParams& p, int dimention, int attachmentNum);
-void drawBuffer(RenderBuffer& rb, RenderingParams& p, float* pixels, int dimention, GLint internalformat, GLenum format,  float minX, float maxX, float minY, float maxY);
+void calculateDiffrence(float* predict, float* target, float* diff, RenderingParams& p);
 
 class PresetPrimitives {
 	Matrix mat;
@@ -31,17 +35,27 @@ class PresetPrimitives {
 	ProjectParams pp;
 	RasterizeParams rp;
 	InterpolateParams ip;
+	ProjectParams pos_pp;
+	InterpolateParams pos_ip;
+	ProjectParams norm_pp;
+	InterpolateParams norm_ip;
 	TexturemapParams tp;
+	MaterialParams mp;
 	AntialiasParams ap;
-	RenderBuffer rp_buffer;
-	RenderBuffer ip_buffer;
-	RenderBuffer tp_buffer;
-	RenderBuffer ap_buffer;
+	FilterParams fp;
+	GLbuffer rp_buffer;
+	GLbuffer ip_buffer;
+	GLbuffer pos_ip_buffer;
+	GLbuffer norm_ip_buffer;
+	GLbuffer tp_buffer;
+	GLbuffer mp_buffer;
+	GLbuffer ap_buffer;
+	GLbuffer fp_buffer;
 
 
 public:
 	const int windowWidth = 1024;
-	const int windowHeight = 1024;
+	const int windowHeight = 512;
 	void init();
 	void display(void);
 	void update(void);
@@ -58,15 +72,13 @@ class PresetCube {
 		InterpolateParams ip;
 		AntialiasParams ap;
 		void init(RenderingParams& p, Matrix& mat, Attribute& pos, Attribute& color);
-		void forward(RenderingParams& p);
+		void forward();
 	};
 
 	Attribute predict_pos;
 	Attribute predict_color;
 	Attribute target_pos;
 	Attribute target_color;
-	Attribute texel;
-	Attribute normal;
 
 	RenderingParams p;
 	Pass predict;
@@ -80,10 +92,10 @@ class PresetCube {
 	Pass hr_target;
 	Pass hr_predict;
 
-	RenderBuffer predict_buffer;
-	RenderBuffer target_buffer;
-	RenderBuffer hr_target_buffer;
-	RenderBuffer hr_predict_buffer;
+	GLbuffer predict_buffer;
+	GLbuffer target_buffer;
+	GLbuffer hr_target_buffer;
+	GLbuffer hr_predict_buffer;
 
 
 	void Randomize();
@@ -101,7 +113,6 @@ class PresetEarth {
 
 	Attribute pos;
 	Attribute texel;
-	Attribute normal;
 
 	RenderingParams p;
 
@@ -110,14 +121,14 @@ class PresetEarth {
 	InterpolateParams ip;
 	TexturemapParams predict_tp;
 	AntialiasParams predict_ap;
-	RenderBuffer predict_buffer;
+	GLbuffer predict_buffer;
 
 	TexturemapParams target_tp;
 	AntialiasParams target_ap;
-	RenderBuffer target_buffer;
+	GLbuffer target_buffer;
 
-	RenderBuffer tex_target_buffer;
-	RenderBuffer tex_predict_buffer;
+	GLbuffer tex_target_buffer;
+	GLbuffer tex_predict_buffer;
 
 	RenderingParams tex_p;
 	AdamParams tex_adam;
@@ -153,10 +164,10 @@ class PresetMaterial {
 	TexturemapParams tp;
 	MaterialParams mp;
 	AntialiasParams ap;
-	RenderBuffer buffer;
+	GLbuffer buffer;
 	MaterialParams target_mp;
 	AntialiasParams target_ap;
-	RenderBuffer target_buffer;
+	GLbuffer target_buffer;
 
 	AdamParams adam;
 	LossParams loss;
@@ -179,15 +190,13 @@ class PresetFilter {
 		InterpolateParams ip;
 		AntialiasParams ap;
 		void init(RenderingParams& p, Matrix& mat, Attribute& pos, Attribute& color);
-		void forward(RenderingParams& p);
+		void forward();
 	};
 
 	Attribute predict_pos;
 	Attribute predict_color;
 	Attribute target_pos;
 	Attribute target_color;
-	Attribute texel;
-	Attribute normal;
 
 	RenderingParams p;
 	Pass predict;
@@ -199,10 +208,10 @@ class PresetFilter {
 	Pass hr_target;
 	Pass hr_predict;
 
-	RenderBuffer predict_buffer;
-	RenderBuffer target_buffer;
-	RenderBuffer hr_target_buffer;
-	RenderBuffer hr_predict_buffer;
+	GLbuffer predict_buffer;
+	GLbuffer target_buffer;
+	GLbuffer hr_target_buffer;
+	GLbuffer hr_predict_buffer;
 
 	AdamParams pos_adam;
 	AdamParams color_adam;
@@ -213,45 +222,6 @@ public:
 	const int windowWidth = 1024;
 	const int windowHeight = 1024;
 	void init(int resolution, int count);
-	void display(void);
-	void update(void);
-	float getLoss() { return Loss::MSE(loss); };
-};
-
-class PresetNNEarth {
-	Matrix mat;
-
-	Attribute pos;
-	Attribute texel;
-	Attribute normal;
-	Attribute params;
-
-	RenderingParams p;
-
-	ProjectParams pp;
-	RasterizeParams rp;
-	InterpolateParams ip;
-	LayerParams lp0;
-	LayerParams lp1;
-	LayerParams lp2;
-	AntialiasParams ap;
-	RenderBuffer predict_buffer;
-
-	InterpolateParams target_ip;
-	TexturemapParams target_tp;
-	AntialiasParams target_ap;
-	RenderBuffer target_buffer;
-
-	AdamParams params_adam;
-	AdamParams adam0;
-	AdamParams adam1;
-	AdamParams adam2;
-	LossParams loss;
-
-public:
-	const int windowWidth = 1024;
-	const int windowHeight = 512;
-	void init();
 	void display(void);
 	void update(void);
 	float getLoss() { return Loss::MSE(loss); };

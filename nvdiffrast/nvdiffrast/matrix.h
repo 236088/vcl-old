@@ -18,6 +18,7 @@ struct Matrix {
 	static void init(Matrix& mat);
 	static void forward(Matrix& mat);
 	static void setRotation(Matrix& mat, float degree, float x, float y, float z);
+	static void setRandomRotation(Matrix& mat);
 	static void addRotation(Matrix& mat, float degree, float x, float y, float z);
 	static void setTranslation(Matrix& mat, float x, float y, float z);
 	static void addTranslation(Matrix& mat, float x, float y, float z);

@@ -31,6 +31,14 @@ void Matrix::setRotation(Matrix& mat, float degree, float x, float y, float z) {
 	mat.rotation = glm::rotate(glm::radians(degree), glm::vec3(x, y, z));
 }
 
+void Matrix::setRandomRotation(Matrix& mat) {
+	float degree = (float)rand() / (float)RAND_MAX * 3.14159265f;
+	float x = (float)rand() / (float)RAND_MAX * 2.f - 1.f;
+	float y = (float)rand() / (float)RAND_MAX * 2.f - 1.f;
+	float z = (float)rand() / (float)RAND_MAX * 2.f - 1.f;
+	mat.rotation = glm::rotate(mat.rotation, degree, glm::vec3(x, y, z));
+}
+
 void Matrix::addRotation(Matrix& mat, float degree, float x, float y, float z) {
 	mat.rotation = glm::rotate(mat.rotation, glm::radians(degree), glm::vec3(x, y, z));
 }

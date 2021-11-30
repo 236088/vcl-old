@@ -1,20 +1,14 @@
 #include "buffer.h"
 
-void Attribute::init(Attribute& attr, float* h_vbo, unsigned int* h_vao, int vboNum, int vaoNum, int dimention) {
+void Attribute::init(Attribute& attr, int vboNum, int vaoNum, int dimention) {
     attr.dimention = dimention;
     attr.vboNum = vboNum;
     attr.vaoNum = vaoNum;
-    cudaMallocHost(&attr.h_vbo, vboNum * dimention * sizeof(float));
-    cudaMallocHost(&attr.h_vao, vaoNum * 3 * sizeof(unsigned int));
     cudaMalloc(&attr.vbo, vboNum * dimention * sizeof(float));
-    cudaMalloc(&attr.vao, vaoNum * 3 * sizeof(float));
-    cudaMemcpy(attr.h_vbo, h_vbo, vboNum * dimention * sizeof(float), cudaMemcpyHostToHost);
-    cudaMemcpy(attr.h_vao, h_vao, vaoNum * 3 * sizeof(float), cudaMemcpyHostToHost);
-    cudaMemcpy(attr.vbo, h_vbo, vboNum * dimention * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(attr.vao, h_vao, vaoNum * 3 * sizeof(float), cudaMemcpyHostToDevice);
+    cudaMalloc(&attr.vao, vaoNum * 3 * sizeof(unsigned int));
 }
 
-void Attribute::loadOBJ(const char* path, Attribute& pos, Attribute& texel, Attribute& normal) {
+void Attribute::loadOBJ(const char* path, Attribute* pos, Attribute* texel, Attribute* normal) {
     FILE* file = fopen(path, "r");
     if (file == NULL) {
         printf("Impossible to open the file !\n");
@@ -102,33 +96,19 @@ void Attribute::loadOBJ(const char* path, Attribute& pos, Attribute& texel, Attr
     }
 
 
-    if (posNum > 0)  Attribute::init(pos, tempPos.data(), tempPosIndex.data(), posNum, indexNum, 3);
-    if (texelNum > 0)  Attribute::init(texel, tempTexel.data(), tempTexelIndex.data(), texelNum, indexNum, 2);
-    if (normNum > 0)  Attribute::init(normal, tempNorm.data(), tempNormIndex.data(), normNum, indexNum, 3);
-}
-
-__global__ void Shrink(const Attribute attr, float* buf, float s) {
-    int px = blockIdx.x * blockDim.x + threadIdx.x;
-    if (px >= attr.vaoNum)return;
-    int idx0 = attr.vao[px * 3];
-    int idx1 = attr.vao[px * 3 + 1];
-    int idx2 = attr.vao[px * 3 + 2];
-    for (int i = 0; i < attr.dimention; i++) {
-        atomicAdd(&attr.vbo[idx0 * attr.dimention + i], (buf[idx1 * attr.dimention + i]- buf[idx0 * attr.dimention + i]) * s);
-        atomicAdd(&attr.vbo[idx1 * attr.dimention + i], (buf[idx2 * attr.dimention + i]- buf[idx1 * attr.dimention + i]) * s);
-        atomicAdd(&attr.vbo[idx2 * attr.dimention + i], (buf[idx0 * attr.dimention + i]- buf[idx2 * attr.dimention + i]) * s);
+    if (posNum > 0 && pos != nullptr) {
+        Attribute::init(*pos, posNum, indexNum, 3);
+        cudaMemcpy(pos->vbo, tempPos.data(),posNum * 3 * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(pos->vao, tempPosIndex.data(),  indexNum * 3 * sizeof(unsigned int), cudaMemcpyHostToDevice);
     }
-}
-
-void Attribute::posShrink(Attribute& pos, float s, int repeat) {
-    dim3 block = dim3(pos.vaoNum > 1024 ? 1024 : pos.vaoNum);
-    dim3 grid = dim3((pos.vaoNum - 1) / 1024 + 1);
-    float* buf;
-    cudaMalloc(&buf, pos.vboNum * pos.dimention * sizeof(float));
-    void* args[] = { &pos,&buf, &s};
-    for (int i = 0; i < repeat; i++) {
-        cudaMemcpy(buf, pos.vbo, pos.vboNum * pos.dimention * sizeof(float), cudaMemcpyDeviceToDevice);
-        cudaLaunchKernel(Shrink, block, grid, args, 0, NULL);
+    if (texelNum > 0 && texel != nullptr) {
+        Attribute::init(*texel, texelNum, indexNum, 2);
+        cudaMemcpy(texel->vbo, tempTexel.data(), texelNum *  2 * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(texel->vao, tempTexelIndex.data(),indexNum * 3 * sizeof(unsigned int), cudaMemcpyHostToDevice);
     }
-    cudaFree(buf);
+    if (normNum > 0 && normal != nullptr) {
+        Attribute::init(*normal, normNum, indexNum, 3);
+        cudaMemcpy(normal->vbo, tempNorm.data(),normNum * 3 * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(normal->vao, tempNormIndex.data(),  indexNum * 3 * sizeof(unsigned int), cudaMemcpyHostToDevice);
+    }
 }

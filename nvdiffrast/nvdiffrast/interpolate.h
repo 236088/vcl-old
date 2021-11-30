@@ -4,34 +4,45 @@
 #include "buffer.h"
 #include "rasterize.h"
 
-struct InterpolateParams {
+struct InterpolateKernelParams {
+	int width;
+	int height;
+	int depth;
 	int enableDA;
-
 	float* rast;
 	float* rastDB;
 	float* attr;
 	unsigned int* idx;
-	int attrNum;
-	int idxNum;
 	int dimention;
 
 	float* out;
 	float* outDA;
+};
 
-	float* dLdout;
-	float* dLdda;
+struct InterpolateGradParams {
+	float* out;
+	float* outDA;
 
-	float* gradAttr;
-	float* gradRast;
-	float* gradRastDB;
+	float* rast;
+	float* rastDB;
+	float* attr;
+};
+
+struct InterpolateParams {
+	InterpolateKernelParams kernel;
+	InterpolateGradParams grad;
+	dim3 grid;
+	dim3 block;
+	int attrNum;
+	int idxNum;
 };
 
 class Interpolate {
 public:
 	static void init(InterpolateParams& ip, RenderingParams& p, RasterizeParams& rp, Attribute& attr);
 	static void init(InterpolateParams& ip, RenderingParams& p, RasterizeParams& rp, Attribute& attr, ProjectParams& pp);
-	static void init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout, float* dLdda);
 	static void init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout);
-	static void forward(InterpolateParams& ip, RenderingParams& p);
-	static void backward(InterpolateParams& ip, RenderingParams& p);
+	static void init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout, float* dLdda);
+	static void forward(InterpolateParams& ip);
+	static void backward(InterpolateParams& ip);
 };

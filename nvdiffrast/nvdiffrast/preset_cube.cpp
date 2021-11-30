@@ -1,34 +1,42 @@
 #include "preset.h"
 
 void PresetCube::Pass::init(RenderingParams& p, Matrix& mat, Attribute& pos, Attribute& color) {
-	Project::init(pp, mat.mvp, pos);
+	Project::init(pp, mat.mvp, pos, 4);
 	Rasterize::init(rp, p, pp, pos, 0);
 	Interpolate::init(ip, p, rp, color);
-	Antialias::init(ap, p, pos, pp, rp, ip.out, 3);
+	Antialias::init(ap, p, pos, pp, rp, ip.kernel.out, 3);
 }
 
-void PresetCube::Pass::forward(RenderingParams& p) {
+void PresetCube::Pass::forward() {
 	Project::forward(pp);
-	Rasterize::forward(rp, p);
-	Interpolate::forward(ip, p);
-	Antialias::forward(ap, p);
+	Rasterize::forward(rp);
+	Interpolate::forward(ip);
+	Antialias::forward(ap);
 }
 
 void PresetCube::Randomize() {
-	float* target_color_vbo, * predict_pos_vbo, * predict_color_vbo;
+	Attribute::init(target_color, target_pos.vboNum, target_pos.vaoNum, 3);
+	Attribute::init(predict_pos, target_pos.vboNum, target_pos.vaoNum, 3);
+	Attribute::init(predict_color, target_pos.vboNum, target_pos.vaoNum, 3);
+	float* target_pos_vbo,* target_color_vbo, * predict_pos_vbo, * predict_color_vbo;
+	cudaMallocHost(&target_pos_vbo, target_pos.vboNum * 3 * sizeof(float));
 	cudaMallocHost(&target_color_vbo, target_pos.vboNum * 3 * sizeof(float));
 	cudaMallocHost(&predict_pos_vbo, target_pos.vboNum * 3 * sizeof(float));
 	cudaMallocHost(&predict_color_vbo, target_pos.vboNum * 3 * sizeof(float));
+	cudaMemcpy(target_pos_vbo, target_pos.vbo, target_pos.vboNum * 3 * sizeof(float), cudaMemcpyDeviceToHost);
 	for (int i = 0; i < target_pos.vboNum * 3; i++) {
-		target_color_vbo[i] = (target_pos.h_vbo[i] + 1.f) / 2.f;
+		target_color_vbo[i] = (target_pos_vbo[i] + 1.f) / 2.f;
 		predict_color_vbo[i] = (float)rand() / (float)RAND_MAX;
 		float r = (float)rand() / (float)RAND_MAX - .5f;
-		predict_pos_vbo[i] = target_pos.h_vbo[i] + r;
+		predict_pos_vbo[i] = target_pos_vbo[i] + r;
 	}
-	Attribute::init(target_color, target_color_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3);
-	Attribute::init(predict_pos, predict_pos_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3);
-	Attribute::init(predict_color, predict_color_vbo, target_pos.h_vao, target_pos.vboNum, target_pos.vaoNum, 3);
-	cudaFree(target_color_vbo); cudaFree(predict_pos_vbo); cudaFree(predict_color_vbo);
+	cudaMemcpy(target_color.vbo, target_color_vbo, target_pos.vboNum * 3 * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(target_color.vao, target_pos.vao, target_pos.vaoNum * 3 * sizeof(unsigned int), cudaMemcpyDeviceToDevice);
+	cudaMemcpy(predict_pos.vbo, predict_pos_vbo, target_pos.vboNum * 3 * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(predict_pos.vao, target_pos.vao, target_pos.vaoNum * 3 * sizeof(unsigned int), cudaMemcpyDeviceToDevice);
+	cudaMemcpy(predict_color.vbo, predict_color_vbo, target_pos.vboNum * 3 * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMemcpy(predict_color.vao, target_pos.vao, target_pos.vaoNum * 3 * sizeof(unsigned int), cudaMemcpyDeviceToDevice);
+	cudaFree(target_pos_vbo); cudaFree(target_color_vbo); cudaFree(predict_pos_vbo); cudaFree(predict_color_vbo);
 }
 
 void PresetCube::init(int resolution) {
@@ -40,63 +48,59 @@ void PresetCube::init(int resolution) {
 	Matrix::setEye(hr_mat, 0.f, 2.f, 5.f);
 	Rendering::init(p, resolution, resolution, 1);
 	Rendering::init(hr_p, 512, 512, 1);
-	Attribute::loadOBJ("../../cube.obj", target_pos, texel, normal);
+	Attribute::loadOBJ("../../cube.obj", &target_pos, nullptr, nullptr);
 	Randomize();
 
 	target.init(p, mat, target_pos, target_color);
 	predict.init(p, mat, predict_pos, predict_color);
 
-	Loss::init(loss, predict.ap.out, target.ap.out, p, 3);
+	Loss::init(loss, predict.ap.kernel.out, target.ap.kernel.out, p, 3);
 	Antialias::init(predict.ap, p, predict.rp, loss.grad);
-	Interpolate::init(predict.ip, p, predict_color, predict.ap.gradIn);
-	Rasterize::init(predict.rp, p, predict.ip.gradRast);
-	Project::init(predict.pp, predict_pos, predict.rp.gradPos);
-	Adam::init(pos_adam, predict_pos,predict.pp.gradPos,1e-2, 0.9, 0.999,  1e-8);
-	Adam::init(color_adam, predict_color, predict.ip.gradAttr, 1e-2,0.9, 0.999,  1e-8);
+	Interpolate::init(predict.ip, p, predict_color, predict.ap.grad.in);
+	Rasterize::init(predict.rp, p, predict.ip.grad.rast);
+	Project::init(predict.pp, predict_pos, predict.rp.grad.proj);
+	Adam::init(pos_adam, predict_pos, predict.pp.grad.vec, 1e-2, 0.9, 0.999, 1e-8);
+	Adam::init(color_adam, predict_color, predict.ip.grad.attr, 1e-2, 0.9, 0.999, 1e-8);
 
 	hr_target.init(hr_p, hr_mat, target_pos, target_color);
 	hr_predict.init(hr_p, hr_mat, predict_pos, predict_color);
 
-	drawBufferInit(target_buffer, p, 3, 15);
-	drawBufferInit(predict_buffer, p, 3, 14);
-	drawBufferInit(hr_target_buffer, hr_p, 3, 13);
-	drawBufferInit(hr_predict_buffer, hr_p, 3, 12);
+	GLbuffer::init(target_buffer, target.ap.kernel.out, p.width, p.height, 3, 15);
+	GLbuffer::init(predict_buffer, predict.ap.kernel.out, p.width, p.height, 3, 14);
+	GLbuffer::init(hr_target_buffer, hr_target.ap.kernel.out, hr_p.width, hr_p.height, 3, 13);
+	GLbuffer::init(hr_predict_buffer, hr_predict.ap.kernel.out, hr_p.width, hr_p.height, 3, 12);
 }
 
 void PresetCube::display(void) {
 	Matrix::forward(mat);
-	target.forward(p);
-	predict.forward(p);
+	target.forward();
+	predict.forward();
 
 	Loss::backward(loss);
-	Antialias::backward(predict.ap, p);
-	Interpolate::backward(predict.ip, p);
-	Rasterize::backward(predict.rp, p);
+	Antialias::backward(predict.ap);
+	Interpolate::backward(predict.ip);
+	Rasterize::backward(predict.rp);
 	Project::backward(predict.pp);
 	Adam::step(pos_adam);
 	Adam::step(color_adam);
 
 	Matrix::forward(hr_mat);
-	hr_target.forward(hr_p);
-	hr_predict.forward(hr_p);
+	hr_target.forward();
+	hr_predict.forward();
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glUseProgram(0);
 
 	glViewport(0, 0, windowWidth, windowHeight);
 	glEnable(GL_TEXTURE_2D);
-	drawBuffer(target_buffer, p, target.ap.out,3, GL_RGB32F, GL_RGB, 0.f, 1.f, 0.f, 1.f);
-	drawBuffer(predict_buffer, p, predict.ap.out, 3, GL_RGB32F, GL_RGB, -1.f, 0.f, 0.f, 1.f);
-	drawBuffer(hr_predict_buffer, hr_p, hr_target.ap.out, 3, GL_RGB32F, GL_RGB, 0.f, 1.f, -1.f, 0.f);
-	drawBuffer(hr_target_buffer, hr_p, hr_predict.ap.out, 3, GL_RGB32F, GL_RGB, -1.f, 0.f, -1.f, 0.f);
+	GLbuffer::draw(predict_buffer, GL_RGB32F, GL_RGB, 0.f, 0.f, 1.f, 1.f);
+	GLbuffer::draw(target_buffer, GL_RGB32F, GL_RGB, -1.f, 0.f, 0.f, 1.f);
+	GLbuffer::draw(hr_predict_buffer, GL_RGB32F, GL_RGB, 0.f, -1.f,1.f,  0.f);
+	GLbuffer::draw(hr_target_buffer,  GL_RGB32F, GL_RGB, -1.f,  -1.f, 0.f,0.f);
 	glFlush();
 }
 
 void PresetCube::update(void) {
-	float theta = (float)rand() / (float)RAND_MAX * 180.f;
-	float x = (float)rand() / (float)RAND_MAX * 2.f - 1.f;
-	float y = (float)rand() / (float)RAND_MAX * 2.f - 1.f;
-	float z = (float)rand() / (float)RAND_MAX * 2.f - 1.f;
-	Matrix::setRotation(mat, theta, x, y, z);
+	Matrix::setRandomRotation(mat);
 	Matrix::addRotation(hr_mat, 1.f, 0.f, 1.f, 0.f);
 }

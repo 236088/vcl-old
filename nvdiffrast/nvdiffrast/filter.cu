@@ -1,79 +1,84 @@
 #include "filter.h"
 
 void Filter::init(FilterParams& fp, RenderingParams& p, float* in, int channel, int count) {
-	fp.channel = channel;
-	fp.count = count;
-	fp.in = in;
+	fp.kernel.width = p.width;
+	fp.kernel.height = p.height;
+	fp.kernel.depth = p.depth;
+	fp.kernel.channel = channel;
+	fp.kernel.count = count;
+	fp.kernel.in = in;
 	float filter[9] = { 0.0625f,0.125f,0.0625f,0.125f,0.25f,0.125f,0.0625f,0.125f,0.0625f };
-	cudaMalloc(&fp.filter, 9 * sizeof(float));
-	cudaMemcpy(fp.filter, filter, 9 * sizeof(float), cudaMemcpyHostToDevice);
-	cudaMalloc(&fp.out, p.width * p.height * channel * sizeof(float));
-	cudaMalloc(&fp.buf, p.width * p.height * channel * sizeof(float));
+	cudaMalloc(&fp.kernel.filter, 9 * sizeof(float));
+	cudaMemcpy(fp.kernel.filter, filter, 9 * sizeof(float), cudaMemcpyHostToDevice);
+	cudaMalloc(&fp.kernel.out, p.width * p.height * channel * sizeof(float));
+	cudaMalloc(&fp.kernel.buf, p.width * p.height * channel * sizeof(float));
+	fp.block = getBlock(p.width, p.height);
+	fp.grid = getGrid(fp.block, p.width, p.height);
 }
 
-__global__ void FilterForwardKernel(const FilterParams fp, const RenderingParams p) {
+__global__ void FilterForwardKernel(const FilterKernelParams fp) {
 	int px = blockIdx.x * blockDim.x + threadIdx.x;
 	int py = blockIdx.y * blockDim.y + threadIdx.y;
 	int pz = blockIdx.z;
-	if (px >= p.width || py >= p.height || pz >= p.depth)return;
-	int pidx = px + p.width * (py + p.height * pz);
+	if (px >= fp.width || py >= fp.height || pz >= fp.depth)return;
+	int pidx = px + fp.width * (py + fp.height * pz);
 
 	int si = 0 < px ? -1 : 0;
-	int ei = px < p.width - 1 ? 1 : 0;
+	int ei = px < fp.width - 1 ? 1 : 0;
 	int sj = 0 < py ? -1 : 0;
-	int ej = py < p.height - 1 ? 1 : 0;
+	int ej = py < fp.height - 1 ? 1 : 0;
 	for (int i = si; i <= ei; i++) {
 		for (int j = sj; j <= ej; j++) {
 			for (int k = 0; k < fp.channel; k++) {
-				int idx = (px + i) + p.width * (py + j);
+				int idx = (px + i) + fp.width * (py + j);
 				fp.out[pidx * fp.channel + k] += fp.buf[idx * fp.channel + k] * fp.filter[i + 3 * j + 4];
 			}
 		}
 	}
 }
 
-void Filter::forward(FilterParams& fp, RenderingParams& p) {
-	cudaMemcpy(fp.buf, fp.in, p.width * p.height * fp.channel * sizeof(float), cudaMemcpyDeviceToDevice);
-	void* args[] = { &fp, &p };
-	for (int i = 0; i < fp.count; i++) {
-		cudaMemset(fp.out, 0, p.width * p.height * fp.channel * sizeof(float));
-		cudaLaunchKernel(FilterForwardKernel, p.grid, p.block, args, 0, NULL);
-		cudaMemcpy(fp.buf, fp.out, p.width * p.height * fp.channel * sizeof(float), cudaMemcpyDeviceToDevice);
+void Filter::forward(FilterParams& fp) {
+	cudaMemcpy(fp.kernel.buf, fp.kernel.in, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float), cudaMemcpyDeviceToDevice);
+	void* args[] = { &fp.kernel };
+	for (int i = 0; i < fp.kernel.count; i++) {
+		cudaMemset(fp.kernel.out, 0, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float));
+		cudaLaunchKernel(FilterForwardKernel, fp.grid, fp.block, args, 0, NULL);
+		cudaMemcpy(fp.kernel.buf, fp.kernel.out, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float), cudaMemcpyDeviceToDevice);
 	}
 }
 
 void Filter::init(FilterParams& fp, RenderingParams& p, float* dLdout) {
-	fp.dLdout= dLdout;
-	cudaMalloc(&fp.gradIn, p.width * p.height * fp.channel * sizeof(float));
+	fp.grad.out= dLdout;
+	cudaMalloc(&fp.grad.in, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float));
 }
 
-__global__ void FilterBackwardKernel(const FilterParams fp, const RenderingParams p) {
+__global__ void FilterBackwardKernel(const FilterKernelParams fp,const  FilterGradParams grad) {
 	int px = blockIdx.x * blockDim.x + threadIdx.x;
 	int py = blockIdx.y * blockDim.y + threadIdx.y;
 	int pz = blockIdx.z;
-	if (px >= p.width || py >= p.height || pz >= p.depth)return;
-	int pidx = px + p.width * (py + p.height * pz);
+	if (px >= fp.width || py >= fp.height || pz >= fp.depth)return;
+	int pidx = px + fp.width * (py + fp.height * pz);
 
 	int si = 0 < px ? -1 : 0;
-	int ei = px < p.width - 1 ? 1 : 0;
+	int ei = px < fp.width - 1 ? 1 : 0;
 	int sj = 0 < py ? -1 : 0;
-	int ej = py < p.height - 1 ? 1 : 0;
+	int ej = py < fp.height - 1 ? 1 : 0;
 	for (int i = si; i <= ei; i++) {
 		for (int j = sj; j <= ej; j++) {
 			for (int k = 0; k < fp.channel; k++) {
-				int idx = (px + i) + p.width * (py + j);
-				fp.gradIn[pidx * fp.channel + k] += fp.buf[idx * fp.channel + k] * fp.filter[i + 3 * j + 4];
+				int idx = (px + i) + fp.width * (py + j);
+				grad.in[pidx * fp.channel + k] += fp.buf[idx * fp.channel + k] * fp.filter[i + 3 * j + 4];
 			}
 		}
 	}
 }
 
-void Filter::backward(FilterParams& fp, RenderingParams& p) {
-	cudaMemcpy(fp.buf, fp.dLdout, p.width * p.height * fp.channel * sizeof(float), cudaMemcpyDeviceToDevice);
-	void* args[] = { &fp, &p };
-	for (int i = 0; i < fp.count; i++) {
-		cudaMemset(fp.gradIn, 0, p.width * p.height * fp.channel * sizeof(float));
-		cudaLaunchKernel(FilterBackwardKernel, p.grid, p.block, args, 0, NULL);
-		cudaMemcpy(fp.buf, fp.gradIn, p.width * p.height * fp.channel * sizeof(float), cudaMemcpyDeviceToDevice);
+void Filter::backward(FilterParams& fp) {
+	cudaMemcpy(fp.kernel.buf, fp.grad.out, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float), cudaMemcpyDeviceToDevice);
+	void* args[] = { &fp.kernel, &fp.grad };
+	for (int i = 0; i < fp.kernel.count; i++) {
+		cudaMemset(fp.grad.in, 0, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float));
+		cudaLaunchKernel(FilterBackwardKernel, fp.grid, fp.block, args, 0, NULL);
+		cudaMemcpy(fp.kernel.buf, fp.grad.in, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float), cudaMemcpyDeviceToDevice);
 	}
 }
