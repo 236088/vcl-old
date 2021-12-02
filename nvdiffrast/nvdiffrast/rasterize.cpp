@@ -62,28 +62,28 @@ static void linkProgram(GLuint* program, GLuint vertexShader, GLuint geometrySha
 	}
 }
 
-void Rasterize::init(RasterizeParams& rp, RenderingParams& p, ProjectParams& pp, Attribute& proj, int enableDB)
+void Rasterize::init(RasterizeParams& rp, ProjectParams& pp, Attribute& proj, int width, int height, int depth, int enableDB)
 {
-	rp.kernel.width = p.width;
-	rp.kernel.height = p.height;
-	rp.kernel.depth = p.depth;
+	rp.kernel.width = width;
+	rp.kernel.height = height;
+	rp.kernel.depth = depth;
 	rp.kernel.proj = pp.kernel.out;
 	rp.kernel.enableDB = enableDB;
-	rp.kernel.xs = 2.f / float(p.width);
-	rp.kernel.ys = 2.f / float(p.height);
+	rp.kernel.xs = 2.f / float(width);
+	rp.kernel.ys = 2.f / float(height);
 	rp.kernel.idx =proj.vao;
 	rp.projNum =proj.vboNum;
 	rp.idxNum =proj.vaoNum;
-	cudaMallocHost(&rp.gl_proj,proj.vboNum * 4 * sizeof(float));
-	cudaMallocHost(&rp.gl_idx,proj.vaoNum * 3* sizeof(unsigned int));
-	cudaMemcpy(rp.gl_proj, rp.kernel.proj,proj.vboNum * 4 * sizeof(float), cudaMemcpyDeviceToHost);
-	cudaMemcpy(rp.gl_idx, rp.kernel.idx,proj.vaoNum * 3 * sizeof(unsigned int), cudaMemcpyDeviceToHost);
-	cudaMallocHost(&rp.gl_out, p.width * p.height * 4 * sizeof(float));
-	cudaMallocHost(&rp.gl_outDB, p.width * p.height * 4 * sizeof(float));
-	cudaMalloc(&rp.kernel.out, p.width * p.height * 4 * sizeof(float));
-	cudaMalloc(&rp.kernel.outDB, p.width * p.height * 4 * sizeof(float));
-	rp.block = getBlock(p.width, p.height);
-	rp.grid = getGrid(rp.block, p.width, p.height);
+	CUDA_ERROR_CHECK(cudaMallocHost(&rp.gl_proj,proj.vboNum * 4 * sizeof(float)));
+	CUDA_ERROR_CHECK(cudaMallocHost(&rp.gl_idx,proj.vaoNum * 3* sizeof(unsigned int)));
+	CUDA_ERROR_CHECK(cudaMemcpy(rp.gl_proj, rp.kernel.proj,proj.vboNum * 4 * sizeof(float), cudaMemcpyDeviceToHost));
+	CUDA_ERROR_CHECK(cudaMemcpy(rp.gl_idx, rp.kernel.idx,proj.vaoNum * 3 * sizeof(unsigned int), cudaMemcpyDeviceToHost));
+	CUDA_ERROR_CHECK(cudaMallocHost(&rp.gl_out, width * height * 4 * sizeof(float)));
+	CUDA_ERROR_CHECK(cudaMallocHost(&rp.gl_outDB, width * height * 4 * sizeof(float)));
+	CUDA_ERROR_CHECK(cudaMalloc(&rp.kernel.out, width * height * 4 * sizeof(float)));
+	CUDA_ERROR_CHECK(cudaMalloc(&rp.kernel.outDB, width * height * 4 * sizeof(float)));
+	rp.block = getBlock(width, height);
+	rp.grid = getGrid(rp.block, width, height, depth);
 
 	GLuint vertexShader;
 	GLuint geometryShader;
@@ -216,7 +216,7 @@ void Rasterize::init(RasterizeParams& rp, RenderingParams& p, ProjectParams& pp,
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, p.width, p.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, rp.gl_out);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, rp.gl_out);
 	glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, rp.buffer, 0);
 
 	if (enableDB) {
@@ -226,14 +226,14 @@ void Rasterize::init(RasterizeParams& rp, RenderingParams& p, ProjectParams& pp,
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, p.width, p.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, rp.gl_outDB);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, rp.gl_outDB);
 		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, rp.bufferDB, 0);
 	}
 
 	GLuint depthbuffer;
 	glGenRenderbuffers(1, &depthbuffer);
 	glBindRenderbuffer(GL_RENDERBUFFER, depthbuffer);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, p.width, p.height);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depthbuffer);
 
 	GLuint vao;
@@ -256,7 +256,7 @@ void Rasterize::init(RasterizeParams& rp, RenderingParams& p, ProjectParams& pp,
 }
 
 void Rasterize::forward(RasterizeParams& rp) {
-	cudaMemcpy(rp.gl_proj, rp.kernel.proj, rp.projNum * 4 * sizeof(float), cudaMemcpyDeviceToHost);
+	CUDA_ERROR_CHECK(cudaMemcpy(rp.gl_proj, rp.kernel.proj, rp.projNum * 4 * sizeof(float), cudaMemcpyDeviceToHost));
 	glBindFramebuffer(GL_FRAMEBUFFER, rp.fbo);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -270,12 +270,12 @@ void Rasterize::forward(RasterizeParams& rp) {
 
 	glBindTexture(GL_TEXTURE_2D, rp.buffer);
 	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, rp.gl_out);
-	cudaMemcpy(rp.kernel.out, rp.gl_out, rp.kernel.width * rp.kernel.height * 4 * sizeof(float), cudaMemcpyHostToDevice);
+	CUDA_ERROR_CHECK(cudaMemcpy(rp.kernel.out, rp.gl_out, rp.kernel.width * rp.kernel.height * 4 * sizeof(float), cudaMemcpyHostToDevice));
 
 	if (rp.kernel.enableDB) {
 		glBindTexture(GL_TEXTURE_2D, rp.bufferDB);
 		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, rp.gl_outDB);
-		cudaMemcpy(rp.kernel.outDB, rp.gl_outDB, rp.kernel.width * rp.kernel.height * 4 * sizeof(float), cudaMemcpyHostToDevice);
+		CUDA_ERROR_CHECK(cudaMemcpy(rp.kernel.outDB, rp.gl_outDB, rp.kernel.width * rp.kernel.height * 4 * sizeof(float), cudaMemcpyHostToDevice));
 	}
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);

@@ -1,6 +1,7 @@
 #pragma once
 #include "common.h"
 #include "buffer.h"
+#include "rasterize.h"
 
 struct FilterKernelParams {
 	int width;
@@ -16,7 +17,7 @@ struct FilterKernelParams {
 	float* out;
 };
 
-struct FilterGradParams {
+struct FilterKernelGradParams {
 	float* in;
 
 	float* out;
@@ -24,15 +25,15 @@ struct FilterGradParams {
 
 struct FilterParams {
 	FilterKernelParams kernel;
-	FilterGradParams grad;
+	FilterKernelGradParams grad;
 	dim3 grid;
 	dim3 block;
 };
 
 class Filter {
 public:
-	static void init(FilterParams& fp, RenderingParams& p, float* in, int channel,int count);
-	static void init(FilterParams& fp, RenderingParams& p, float* dLdout);
+	static void init(FilterParams& fp, RasterizeParams& rp, float* in, int channel,int count);
+	static void init(FilterParams& fp, float* dLdout);
 	static void forward(FilterParams& fp);
 	static void backward(FilterParams& fp);
 };

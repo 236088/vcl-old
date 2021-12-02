@@ -4,8 +4,8 @@ void Attribute::init(Attribute& attr, int vboNum, int vaoNum, int dimention) {
     attr.dimention = dimention;
     attr.vboNum = vboNum;
     attr.vaoNum = vaoNum;
-    cudaMalloc(&attr.vbo, vboNum * dimention * sizeof(float));
-    cudaMalloc(&attr.vao, vaoNum * 3 * sizeof(unsigned int));
+    CUDA_ERROR_CHECK(cudaMalloc(&attr.vbo, vboNum * dimention * sizeof(float)));
+    CUDA_ERROR_CHECK(cudaMalloc(&attr.vao, vaoNum * 3 * sizeof(unsigned int)));
 }
 
 void Attribute::loadOBJ(const char* path, Attribute* pos, Attribute* texel, Attribute* normal) {
@@ -98,17 +98,17 @@ void Attribute::loadOBJ(const char* path, Attribute* pos, Attribute* texel, Attr
 
     if (posNum > 0 && pos != nullptr) {
         Attribute::init(*pos, posNum, indexNum, 3);
-        cudaMemcpy(pos->vbo, tempPos.data(),posNum * 3 * sizeof(float), cudaMemcpyHostToDevice);
-        cudaMemcpy(pos->vao, tempPosIndex.data(),  indexNum * 3 * sizeof(unsigned int), cudaMemcpyHostToDevice);
+        CUDA_ERROR_CHECK(cudaMemcpy(pos->vbo, tempPos.data(), posNum * 3 * sizeof(float), cudaMemcpyHostToDevice));
+        CUDA_ERROR_CHECK(cudaMemcpy(pos->vao, tempPosIndex.data(), indexNum * 3 * sizeof(unsigned int), cudaMemcpyHostToDevice));
     }
     if (texelNum > 0 && texel != nullptr) {
         Attribute::init(*texel, texelNum, indexNum, 2);
-        cudaMemcpy(texel->vbo, tempTexel.data(), texelNum *  2 * sizeof(float), cudaMemcpyHostToDevice);
-        cudaMemcpy(texel->vao, tempTexelIndex.data(),indexNum * 3 * sizeof(unsigned int), cudaMemcpyHostToDevice);
+        CUDA_ERROR_CHECK(cudaMemcpy(texel->vbo, tempTexel.data(), texelNum * 2 * sizeof(float), cudaMemcpyHostToDevice));
+        CUDA_ERROR_CHECK(cudaMemcpy(texel->vao, tempTexelIndex.data(), indexNum * 3 * sizeof(unsigned int), cudaMemcpyHostToDevice));
     }
     if (normNum > 0 && normal != nullptr) {
         Attribute::init(*normal, normNum, indexNum, 3);
-        cudaMemcpy(normal->vbo, tempNorm.data(),normNum * 3 * sizeof(float), cudaMemcpyHostToDevice);
-        cudaMemcpy(normal->vao, tempNormIndex.data(),  indexNum * 3 * sizeof(unsigned int), cudaMemcpyHostToDevice);
+        CUDA_ERROR_CHECK(cudaMemcpy(normal->vbo, tempNorm.data(), normNum * 3 * sizeof(float), cudaMemcpyHostToDevice));;
+        CUDA_ERROR_CHECK(cudaMemcpy(normal->vao, tempNormIndex.data(), indexNum * 3 * sizeof(unsigned int), cudaMemcpyHostToDevice));
     }
 }

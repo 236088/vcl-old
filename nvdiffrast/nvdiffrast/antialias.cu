@@ -1,5 +1,31 @@
 #include "antialias.h"
 
+void Antialias::init(AntialiasParams& ap, Attribute& pos, ProjectParams& pp, RasterizeParams& rp, float* in, int channel) {
+    ap.kernel.width = rp.kernel.width;
+    ap.kernel.height = rp.kernel.height;
+    ap.kernel.depth = rp.kernel.depth;
+    ap.kernel.channel = channel;
+    ap.kernel.proj = pp.kernel.out;
+    ap.kernel.idx = pos.vao;
+    ap.kernel.rast = rp.kernel.out;
+    ap.kernel.in = in;
+    ap.projNum = pos.vboNum;
+    ap.kernel.xh = rp.kernel.width / 2.f;
+    ap.kernel.yh = rp.kernel.height / 2.f;
+    CUDA_ERROR_CHECK(cudaMalloc(&ap.kernel.out, rp.kernel.width * rp.kernel.height * channel * sizeof(float)));
+
+    ap.block = rp.block;
+    ap.grid = rp.grid;
+    if (rp.kernel.width > rp.kernel.height) {
+        ap.block.x >>= 1;
+        ap.grid.x <<= 1;
+    }
+    else {
+        ap.block.y >>= 1;
+        ap.grid.y <<= 1;
+    }
+}
+
 __device__ __forceinline__ void forwardEdgeLeak(const AntialiasKernelParams ap, int pidx, int oidx, float2 pa, float2 pb, float2 o) {
     float a = cross(pa, pb);
     float oa = cross(pa - o, pb - o);
@@ -86,28 +112,18 @@ __global__ void AntialiasForwardKernel(const AntialiasKernelParams ap) {
     }
 }
 
-void Antialias::init(AntialiasParams& ap, RenderingParams& p, Attribute& pos, ProjectParams& pp, RasterizeParams& rp, float* in, int channel) {
-    ap.kernel.width = p.width;
-    ap.kernel.height = p.height;
-    ap.kernel.depth = p.depth;
-    ap.kernel.channel = channel;
-    ap.kernel.proj = pp.kernel.out;
-    ap.kernel.idx = pos.vao;
-    ap.kernel.rast = rp.kernel.out;
-    ap.kernel.in = in;
-    ap.projNum = pos.vboNum;
-    ap.kernel.xh = p.width / 2.f;
-    ap.kernel.yh = p.height / 2.f;
-    cudaMalloc(&ap.kernel.out, p.width * p.height * channel * sizeof(float));
-
-    ap.block = dim3(p.block.x / 2, p.block.y / 2);
-    ap.grid = dim3(p.grid.x * 2, p.grid.y * 2);
+void Antialias::forward(AntialiasParams& ap) {
+    CUDA_ERROR_CHECK(cudaMemset(ap.kernel.out, 0, ap.kernel.width * ap.kernel.height * ap.kernel.channel * sizeof(float)));
+    void* args[] = { &ap.kernel };
+    CUDA_ERROR_CHECK(cudaLaunchKernel(AntialiasForwardKernel, ap.grid, ap.block, args, 0, NULL));
 }
 
-void Antialias::forward(AntialiasParams& ap) {
-    cudaMemset(ap.kernel.out, 0, ap.kernel.width * ap.kernel.height * ap.kernel.channel * sizeof(float));
-    void* args[] = { &ap.kernel };
-    cudaLaunchKernel(AntialiasForwardKernel, ap.grid, ap.block, args, 0, NULL);
+void Antialias::init(AntialiasParams& ap, RasterizeParams& rp, float* dLdout) {
+    ap.grad.out = dLdout;
+    CUDA_ERROR_CHECK(cudaMalloc(&ap.grad.proj, ap.projNum * 4 * sizeof(float)));
+    rp.grad.proj = ap.grad.proj;
+    rp.enableAA = 1;
+    CUDA_ERROR_CHECK(cudaMalloc(&ap.grad.in, rp.kernel.width * rp.kernel.height * ap.kernel.channel * sizeof(float)));
 }
 
 // horizontal :0, vertical 1;
@@ -175,7 +191,7 @@ void Antialias::forward(AntialiasParams& ap) {
 //   dL/dvb.w=-dL/dvb.x*pb.x-dL/dvb.y*pb.y
 //
 
-__device__ __forceinline__ void backwardEdgeLeak(const AntialiasKernelParams ap, const AntialiasGradlParams grad, int pidx, int oidx, float2 pa, float2 pb, int idxa, int idxb, float iwa, float iwb, float2 o) {
+__device__ __forceinline__ void backwardEdgeLeak(const AntialiasKernelParams ap, const AntialiasKernelGradParams grad, int pidx, int oidx, float2 pa, float2 pb, int idxa, int idxb, float iwa, float iwb, float2 o) {
     float a = cross(pa, pb);
     float oa = cross(pa - o, pb - o);
     if (a * oa > 0) return;
@@ -219,7 +235,7 @@ __device__ __forceinline__ void backwardEdgeLeak(const AntialiasKernelParams ap,
     atomicAdd_xyw(grad.proj + idxb * 4, dLdbx, dLdby, -dLdbx * pb.x - dLdby * pb.y);
 }
 
-__device__ __forceinline__ void backwardTriangleFetch(const AntialiasKernelParams ap, const AntialiasGradlParams grad, int pidx, int oidx, float2 f, int d) {
+__device__ __forceinline__ void backwardTriangleFetch(const AntialiasKernelParams ap, const AntialiasKernelGradParams grad, int pidx, int oidx, float2 f, int d) {
     int idx = (int)ap.rast[pidx * 4 + 3] - 1;
     unsigned int idx0 = ap.idx[idx * 3];
     unsigned int idx1 = ap.idx[idx * 3 + 1];
@@ -248,7 +264,7 @@ __device__ __forceinline__ void backwardTriangleFetch(const AntialiasKernelParam
     backwardEdgeLeak(ap, grad, pidx, oidx, p2, p0, idx2, idx0, iw2, iw0, o);
 }
 
-__global__ void AntialiasBackwardKernel(const AntialiasKernelParams ap, const AntialiasGradlParams grad) {
+__global__ void AntialiasBackwardKernel(const AntialiasKernelParams ap, const AntialiasKernelGradParams grad) {
     int px = blockIdx.x * blockDim.x + threadIdx.x;
     int py = blockIdx.y * blockDim.y + threadIdx.y;
     int pz = blockIdx.z;
@@ -285,16 +301,8 @@ __global__ void AntialiasBackwardKernel(const AntialiasKernelParams ap, const An
     }
 }
 
-void Antialias::init(AntialiasParams& ap, RenderingParams& p, RasterizeParams& rp, float* dLdout) {
-    ap.grad.out = dLdout;
-    cudaMalloc(&ap.grad.proj, ap.projNum * 4 * sizeof(float));
-    rp.grad.proj = ap.grad.proj;
-    rp.enableAA = 1;
-    cudaMalloc(&ap.grad.in, p.width * p.height * ap.kernel.channel * sizeof(float));
-}
-
 void Antialias::backward(AntialiasParams& ap) {
-    cudaMemset(ap.grad.proj, 0, ap.projNum * 4 * sizeof(float));
+    CUDA_ERROR_CHECK(cudaMemset(ap.grad.proj, 0, ap.projNum * 4 * sizeof(float)));
     void* args[] = { &ap.kernel,&ap.grad };
-    cudaLaunchKernel( AntialiasBackwardKernel, ap.grid, ap.block , args, 0, NULL);
+    CUDA_ERROR_CHECK(cudaLaunchKernel( AntialiasBackwardKernel, ap.grid, ap.block , args, 0, NULL));
 }

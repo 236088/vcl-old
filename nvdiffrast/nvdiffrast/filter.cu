@@ -1,19 +1,19 @@
 #include "filter.h"
 
-void Filter::init(FilterParams& fp, RenderingParams& p, float* in, int channel, int count) {
-	fp.kernel.width = p.width;
-	fp.kernel.height = p.height;
-	fp.kernel.depth = p.depth;
+void Filter::init(FilterParams& fp, RasterizeParams& rp, float* in, int channel, int count) {
+	fp.kernel.width = rp.kernel.width;
+	fp.kernel.height = rp.kernel.height;
+	fp.kernel.depth = rp.kernel.depth;
 	fp.kernel.channel = channel;
 	fp.kernel.count = count;
 	fp.kernel.in = in;
 	float filter[9] = { 0.0625f,0.125f,0.0625f,0.125f,0.25f,0.125f,0.0625f,0.125f,0.0625f };
-	cudaMalloc(&fp.kernel.filter, 9 * sizeof(float));
-	cudaMemcpy(fp.kernel.filter, filter, 9 * sizeof(float), cudaMemcpyHostToDevice);
-	cudaMalloc(&fp.kernel.out, p.width * p.height * channel * sizeof(float));
-	cudaMalloc(&fp.kernel.buf, p.width * p.height * channel * sizeof(float));
-	fp.block = getBlock(p.width, p.height);
-	fp.grid = getGrid(fp.block, p.width, p.height);
+	CUDA_ERROR_CHECK(cudaMalloc(&fp.kernel.filter, 9 * sizeof(float)));
+	CUDA_ERROR_CHECK(cudaMemcpy(fp.kernel.filter, filter, 9 * sizeof(float), cudaMemcpyHostToDevice));
+	CUDA_ERROR_CHECK(cudaMalloc(&fp.kernel.out, rp.kernel.width * rp.kernel.height * channel * sizeof(float)));
+	CUDA_ERROR_CHECK(cudaMalloc(&fp.kernel.buf, rp.kernel.width * rp.kernel.height * channel * sizeof(float)));
+	fp.block = rp.block;
+	fp.grid = rp.grid;
 }
 
 __global__ void FilterForwardKernel(const FilterKernelParams fp) {
@@ -38,21 +38,21 @@ __global__ void FilterForwardKernel(const FilterKernelParams fp) {
 }
 
 void Filter::forward(FilterParams& fp) {
-	cudaMemcpy(fp.kernel.buf, fp.kernel.in, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float), cudaMemcpyDeviceToDevice);
+	CUDA_ERROR_CHECK(cudaMemcpy(fp.kernel.buf, fp.kernel.in, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float), cudaMemcpyDeviceToDevice));
 	void* args[] = { &fp.kernel };
 	for (int i = 0; i < fp.kernel.count; i++) {
-		cudaMemset(fp.kernel.out, 0, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float));
-		cudaLaunchKernel(FilterForwardKernel, fp.grid, fp.block, args, 0, NULL);
-		cudaMemcpy(fp.kernel.buf, fp.kernel.out, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float), cudaMemcpyDeviceToDevice);
+		CUDA_ERROR_CHECK(cudaMemset(fp.kernel.out, 0, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float)));
+		CUDA_ERROR_CHECK(cudaLaunchKernel(FilterForwardKernel, fp.grid, fp.block, args, 0, NULL));
+		CUDA_ERROR_CHECK(cudaMemcpy(fp.kernel.buf, fp.kernel.out, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float), cudaMemcpyDeviceToDevice));
 	}
 }
 
-void Filter::init(FilterParams& fp, RenderingParams& p, float* dLdout) {
+void Filter::init(FilterParams& fp, float* dLdout) {
 	fp.grad.out= dLdout;
-	cudaMalloc(&fp.grad.in, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float));
+	CUDA_ERROR_CHECK(cudaMalloc(&fp.grad.in, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float)));
 }
 
-__global__ void FilterBackwardKernel(const FilterKernelParams fp,const  FilterGradParams grad) {
+__global__ void FilterBackwardKernel(const FilterKernelParams fp,const  FilterKernelGradParams grad) {
 	int px = blockIdx.x * blockDim.x + threadIdx.x;
 	int py = blockIdx.y * blockDim.y + threadIdx.y;
 	int pz = blockIdx.z;
@@ -74,11 +74,11 @@ __global__ void FilterBackwardKernel(const FilterKernelParams fp,const  FilterGr
 }
 
 void Filter::backward(FilterParams& fp) {
-	cudaMemcpy(fp.kernel.buf, fp.grad.out, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float), cudaMemcpyDeviceToDevice);
+	CUDA_ERROR_CHECK(cudaMemcpy(fp.kernel.buf, fp.grad.out, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float), cudaMemcpyDeviceToDevice));
 	void* args[] = { &fp.kernel, &fp.grad };
 	for (int i = 0; i < fp.kernel.count; i++) {
-		cudaMemset(fp.grad.in, 0, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float));
-		cudaLaunchKernel(FilterBackwardKernel, fp.grid, fp.block, args, 0, NULL);
-		cudaMemcpy(fp.kernel.buf, fp.grad.in, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float), cudaMemcpyDeviceToDevice);
+		CUDA_ERROR_CHECK(cudaMemset(fp.grad.in, 0, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float)));
+		CUDA_ERROR_CHECK(cudaLaunchKernel(FilterBackwardKernel, fp.grid, fp.block, args, 0, NULL));
+		CUDA_ERROR_CHECK(cudaMemcpy(fp.kernel.buf, fp.grad.in, fp.kernel.width * fp.kernel.height * fp.kernel.channel * sizeof(float), cudaMemcpyDeviceToDevice));
 	}
 }

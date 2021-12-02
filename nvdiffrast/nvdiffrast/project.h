@@ -11,7 +11,7 @@ struct ProjectKernelParams {
 	float* out;
 };
 
-struct ProjectGradParams {
+struct ProjectKernelGradParams {
 	float* out;
 
 	float* vec;
@@ -19,7 +19,7 @@ struct ProjectGradParams {
 
 struct ProjectParams{
 	ProjectKernelParams kernel;
-	ProjectGradParams grad;
+	ProjectKernelGradParams grad;
 	dim3 block;
 	dim3 grid;
 };
@@ -28,6 +28,7 @@ class Project {
 public:
 	static void init(ProjectParams& pp, float* mat, Attribute& vec, int dimention);
 	static void init(ProjectParams& pp, Attribute& vec, float* dLdout);
+	static void clear(ProjectParams& pp);
 	static void forward(ProjectParams& pp);
 	static void backward(ProjectParams& pp);
 };

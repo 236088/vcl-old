@@ -22,8 +22,6 @@ struct GLbuffer {
 	static void draw(GLbuffer& rb, GLint internalformat, GLenum format, float minX, float minY, float maxX, float maxY);
 };
 
-void calculateDiffrence(float* predict, float* target, float* diff, RenderingParams& p);
-
 class PresetPrimitives {
 	Matrix mat;
 
@@ -31,7 +29,6 @@ class PresetPrimitives {
 	Attribute texel;
 	Attribute normal;
 
-	RenderingParams p;
 	ProjectParams pp;
 	RasterizeParams rp;
 	InterpolateParams ip;
@@ -52,7 +49,6 @@ class PresetPrimitives {
 	GLbuffer ap_buffer;
 	GLbuffer fp_buffer;
 
-
 public:
 	const int windowWidth = 1024;
 	const int windowHeight = 512;
@@ -66,37 +62,40 @@ class PresetCube {
 	Matrix mat;
 	Matrix hr_mat;
 
-	struct Pass {
-		ProjectParams pp;
-		RasterizeParams rp;
-		InterpolateParams ip;
-		AntialiasParams ap;
-		void init(RenderingParams& p, Matrix& mat, Attribute& pos, Attribute& color);
-		void forward();
-	};
-
 	Attribute predict_pos;
 	Attribute predict_color;
+	ProjectParams predict_pp;
+	RasterizeParams predict_rp;
+	InterpolateParams predict_ip;
+	AntialiasParams predict_ap;
+
 	Attribute target_pos;
 	Attribute target_color;
+	ProjectParams target_pp;
+	RasterizeParams target_rp;
+	InterpolateParams target_ip;
+	AntialiasParams target_ap;
 
-	RenderingParams p;
-	Pass predict;
+	ProjectParams hr_predict_pp;
+	RasterizeParams hr_predict_rp;
+	InterpolateParams hr_predict_ip;
+	AntialiasParams hr_predict_ap;
+
+	ProjectParams hr_target_pp;
+	RasterizeParams hr_target_rp;
+	InterpolateParams hr_target_ip;
+	AntialiasParams hr_target_ap;
+
 	AdamParams pos_adam;
 	AdamParams color_adam;
 	LossParams loss;
-
-	Pass target;
-
-	RenderingParams hr_p;
-	Pass hr_target;
-	Pass hr_predict;
+	LossParams pos_loss;
+	LossParams color_loss;
 
 	GLbuffer predict_buffer;
 	GLbuffer target_buffer;
 	GLbuffer hr_target_buffer;
 	GLbuffer hr_predict_buffer;
-
 
 	void Randomize();
 public:
@@ -105,7 +104,7 @@ public:
 	void init(int resolution);
 	void display(void);
 	void update(void);
-	float getLoss() { return Loss::MSE(loss); };
+	float getLoss() { return Loss::MSE(pos_loss)+Loss::MSE(color_loss); };
 };
 
 class PresetEarth {
@@ -113,8 +112,6 @@ class PresetEarth {
 
 	Attribute pos;
 	Attribute texel;
-
-	RenderingParams p;
 
 	ProjectParams pp;
 	RasterizeParams rp;
@@ -130,7 +127,6 @@ class PresetEarth {
 	GLbuffer tex_target_buffer;
 	GLbuffer tex_predict_buffer;
 
-	RenderingParams tex_p;
 	AdamParams tex_adam;
 	LossParams loss;
 
@@ -151,8 +147,6 @@ class PresetMaterial {
 	Attribute pos;
 	Attribute texel;
 	Attribute normal;
-
-	RenderingParams p;
 
 	ProjectParams pp;
 	ProjectParams norm_pp;
@@ -184,38 +178,43 @@ class PresetFilter {
 	Matrix mat;
 	Matrix hr_mat;
 
-	struct Pass {
-		ProjectParams pp;
-		RasterizeParams rp;
-		InterpolateParams ip;
-		AntialiasParams ap;
-		void init(RenderingParams& p, Matrix& mat, Attribute& pos, Attribute& color);
-		void forward();
-	};
-
 	Attribute predict_pos;
 	Attribute predict_color;
+	ProjectParams predict_pp;
+	RasterizeParams predict_rp;
+	InterpolateParams predict_ip;
+	AntialiasParams predict_ap;
+	FilterParams predict_fp;
+
 	Attribute target_pos;
 	Attribute target_color;
-
-	RenderingParams p;
-	Pass predict;
-	FilterParams predict_fp;
-	Pass target;
+	ProjectParams target_pp;
+	RasterizeParams target_rp;
+	InterpolateParams target_ip;
+	AntialiasParams target_ap;
 	FilterParams target_fp;
 
-	RenderingParams hr_p;
-	Pass hr_target;
-	Pass hr_predict;
+	ProjectParams hr_predict_pp;
+	RasterizeParams hr_predict_rp;
+	InterpolateParams hr_predict_ip;
+	AntialiasParams hr_predict_ap;
+
+	ProjectParams hr_target_pp;
+	RasterizeParams hr_target_rp;
+	InterpolateParams hr_target_ip;
+	AntialiasParams hr_target_ap;
+
+	AdamParams pos_adam;
+	AdamParams color_adam;
+	LossParams loss;
 
 	GLbuffer predict_buffer;
 	GLbuffer target_buffer;
 	GLbuffer hr_target_buffer;
 	GLbuffer hr_predict_buffer;
 
-	AdamParams pos_adam;
-	AdamParams color_adam;
-	LossParams loss;
+	LossParams pos_loss;
+	LossParams color_loss;
 
 	void Randomize();
 public:
@@ -224,5 +223,5 @@ public:
 	void init(int resolution, int count);
 	void display(void);
 	void update(void);
-	float getLoss() { return Loss::MSE(loss); };
+	float getLoss() { return Loss::MSE(pos_loss) + Loss::MSE(color_loss); };
 };

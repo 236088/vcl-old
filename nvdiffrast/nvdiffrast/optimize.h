@@ -23,7 +23,7 @@ struct LossParams
 
 class Loss {
 public:
-	static void init(LossParams& loss, float* predict, float* target, RenderingParams& p, int dimention);
+	static void init(LossParams& loss, float* predict, float* target, int width, int height, int depth);
 	static float MSE(LossParams& loss);
 	static void backward(LossParams& loss);
 };

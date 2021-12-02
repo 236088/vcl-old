@@ -1,15 +1,15 @@
 #include "common.h"
 #include "texturemap.h"
 
-void Texturemap::init(TexturemapParams& tp, RenderingParams& p, RasterizeParams& rp, InterpolateParams& ip, int texwidth, int texheight, int channel, int miplevel) {
+void Texturemap::init(TexturemapParams& tp, RasterizeParams& rp, InterpolateParams& ip, int texwidth, int texheight, int channel, int miplevel) {
 	miplevel = miplevel < TEX_MAX_MIP_LEVEL ? miplevel : TEX_MAX_MIP_LEVEL;
 	if(((texwidth >> miplevel) << miplevel) != texwidth || ((texheight >> miplevel) << miplevel) != texheight){
 		printf("Invalid miplevel value");
 		exit(1);
 	}
-	tp.kernel.width = p.width;
-	tp.kernel.height = p.height;
-	tp.kernel.depth = p.depth;
+	tp.kernel.width = rp.kernel.width;
+	tp.kernel.height = rp.kernel.height;
+	tp.kernel.depth = rp.kernel.depth;
 	tp.kernel.texwidth = texwidth;
 	tp.kernel.texheight = texheight;
 	tp.kernel.channel = channel;
@@ -19,15 +19,15 @@ void Texturemap::init(TexturemapParams& tp, RenderingParams& p, RasterizeParams&
 	tp.kernel.uvDA = ip.kernel.outDA;
 	tp.texblock = getBlock(texwidth, texheight);
 	tp.texgrid = getGrid(tp.texblock, texwidth, texheight);
-	tp.block = getBlock(p.width, p.height);
-	tp.grid = getGrid(tp.block, p.width, p.height);
+	tp.block = rp.block;
+	tp.grid = rp.grid;
 
 	int w = texwidth, h = texheight;
 	for (int i = 0; i < miplevel; i++) {
-		cudaMalloc(&tp.kernel.texture[i], w * h * channel * sizeof(float));
+		CUDA_ERROR_CHECK(cudaMalloc(&tp.kernel.texture[i], w * h * channel * sizeof(float)));
 		w >>= 1; h >>= 1;
 	}
-	cudaMalloc(&tp.kernel.out, p.width * p.height * channel * sizeof(float));
+	CUDA_ERROR_CHECK(cudaMalloc(&tp.kernel.out, rp.kernel.width * rp.kernel.height * channel * sizeof(float)));
 }
 
 __global__ void bmpUcharToFloat(unsigned char* data, const TexturemapKernelParams tp) {
@@ -75,12 +75,12 @@ void Texturemap::loadBMP(TexturemapParams& tp, const char* path) {
 
 	unsigned char* dev_data;
 
-	cudaMalloc(&dev_data, tp.kernel.texwidth * tp.kernel.texheight * tp.kernel.channel * sizeof(unsigned char));
-	cudaMemcpy(dev_data, data, tp.kernel.texwidth * tp.kernel.texheight * tp.kernel.channel * sizeof(unsigned char), cudaMemcpyHostToDevice);
+	CUDA_ERROR_CHECK(cudaMalloc(&dev_data, tp.kernel.texwidth * tp.kernel.texheight * tp.kernel.channel * sizeof(unsigned char)));
+	CUDA_ERROR_CHECK(cudaMemcpy(dev_data, data, tp.kernel.texwidth * tp.kernel.texheight * tp.kernel.channel * sizeof(unsigned char), cudaMemcpyHostToDevice));
 
 	void* args[] = { &dev_data,&tp.kernel };
-	cudaLaunchKernel(bmpUcharToFloat, tp.texgrid, tp.texblock, args, 0, NULL);
-	cudaFree(dev_data);
+	CUDA_ERROR_CHECK(cudaLaunchKernel(bmpUcharToFloat, tp.texgrid, tp.texblock, args, 0, NULL));
+	CUDA_ERROR_CHECK(cudaFree(dev_data));
 }
 
 __global__ void downSampling(const TexturemapKernelParams tp, int index, int width, int height) {
@@ -115,7 +115,7 @@ void Texturemap::buildMipTexture(TexturemapParams& tp) {
 		w >>= 1; h >>= 1;
 		dim3 block = getBlock(w, h);
 		dim3 grid = getGrid(block, w, h);
-		cudaLaunchKernel(downSampling, grid, block, args, 0, NULL);
+		CUDA_ERROR_CHECK(cudaLaunchKernel(downSampling, grid, block, args, 0, NULL));
 	}
 }
 
@@ -191,19 +191,19 @@ __global__ void TexturemapForwardKernel(const TexturemapKernelParams tp) {
 }
 
 void Texturemap::forward(TexturemapParams& tp) {
-	cudaMemset(tp.kernel.out, 0, tp.kernel.width * tp.kernel.height * tp.kernel.channel * sizeof(float));
+	CUDA_ERROR_CHECK(cudaMemset(tp.kernel.out, 0, tp.kernel.width * tp.kernel.height * tp.kernel.channel * sizeof(float)));
 	void* args[] = { &tp.kernel };
-	cudaLaunchKernel(TexturemapForwardKernel, tp.grid, tp.block, args, 0, NULL);
+	CUDA_ERROR_CHECK(cudaLaunchKernel(TexturemapForwardKernel, tp.grid, tp.block, args, 0, NULL));
 }
 
-void Texturemap::init(TexturemapParams& tp, RenderingParams& p, float* dLdout) {
+void Texturemap::init(TexturemapParams& tp, float* dLdout) {
 	tp.grad.out = dLdout;
-	cudaMalloc(&tp.grad.uv, p.height * p.height * 2 * sizeof(float));
-	cudaMalloc(&tp.grad.uvDA, p.height * p.height * 4 * sizeof(float));
+	CUDA_ERROR_CHECK(cudaMalloc(&tp.grad.uv, tp.kernel.height * tp.kernel.height * 2 * sizeof(float)));
+	CUDA_ERROR_CHECK(cudaMalloc(&tp.grad.uvDA, tp.kernel.height * tp.kernel.height * 4 * sizeof(float)));
 
 	int w = tp.kernel.texwidth, h = tp.kernel.texheight;
 	for (int i = 0; i < tp.kernel.miplevel; i++) {
-		cudaMalloc(&tp.grad.texture[i], w * h * tp.kernel.channel * sizeof(float));
+		CUDA_ERROR_CHECK(cudaMalloc(&tp.grad.texture[i], w * h * tp.kernel.channel * sizeof(float)));
 		w >>= 1; h >>= 1;
 	}
 }
@@ -277,7 +277,7 @@ __device__ __forceinline__ void calculateLevel(const TexturemapKernelParams tp, 
 // dlevel/d(dt/dx) = 1/2ln2/(b * sqrt(b^2-a^2) + (b^2-a^2)) * ((sqrt(b^2-a^2) + b) * dt/dx + a * ds/dy)
 // dlevel/d(dt/dy) = 1/2ln2/(b * sqrt(b^2-a^2) + (b^2-a^2)) * ((sqrt(b^2-a^2) + b) * dt/dy - a * ds/dx)
 //
-__global__ void TexturemapBackwardKernel(const TexturemapKernelParams tp, const TexturemapGradParams grad) {
+__global__ void TexturemapBackwardKernel(const TexturemapKernelParams tp, const TexturemapKernelGradParams grad) {
 	int px = blockIdx.x * blockDim.x + threadIdx.x;
 	int py = blockIdx.y * blockDim.y + threadIdx.y;
 	int pz = blockIdx.z;
@@ -332,7 +332,7 @@ __global__ void TexturemapBackwardKernel(const TexturemapKernelParams tp, const 
 	((float4*)grad.uvDA)[pidx] = gl * dleveldda;
 }
 
-__global__ void gardAddThrough(const TexturemapKernelParams tp, const TexturemapGradParams grad,int index, int width, int height) {
+__global__ void gardAddThrough(const TexturemapKernelParams tp, const TexturemapKernelGradParams grad,int index, int width, int height) {
 	int px = blockIdx.x * blockDim.x + threadIdx.x;
 	int py = blockIdx.y * blockDim.y + threadIdx.y;
 	int pz = blockIdx.z;
@@ -362,18 +362,18 @@ void gradSum(TexturemapParams& tp) {
 		w <<= 1; h <<= 1;
 		dim3 block = getBlock(w, h);
 		dim3 grid = getGrid(block, w, h);
-		cudaLaunchKernel(gardAddThrough, grid, block, args, 0, NULL);
+		CUDA_ERROR_CHECK(cudaLaunchKernel(gardAddThrough, grid, block, args, 0, NULL));
 	}
 }
 
 void Texturemap::backward(TexturemapParams& tp) {
 	int w = tp.kernel.texwidth, h = tp.kernel.texheight;
 	for (int i = 0; i < tp.kernel.miplevel; i++) {
-		cudaMemset(tp.grad.texture[i], 0, w * h * tp.kernel.channel * sizeof(float));
+		CUDA_ERROR_CHECK(cudaMemset(tp.grad.texture[i], 0, w * h * tp.kernel.channel * sizeof(float)));
 		w >>= 1; h >>= 1;
 	}
 	void* args[] = { &tp.kernel, &tp.grad };
-	cudaLaunchKernel(TexturemapBackwardKernel, tp.grid, tp.block, args, 0, NULL);
+	CUDA_ERROR_CHECK(cudaLaunchKernel(TexturemapBackwardKernel, tp.grid, tp.block, args, 0, NULL));
 	gradSum(tp);
 	buildMipTexture(tp);
 }

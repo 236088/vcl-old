@@ -1,9 +1,9 @@
 #include "interpolate.h"
 
-void Interpolate::init(InterpolateParams& ip, RenderingParams& p, RasterizeParams& rp, Attribute& attr) {
-    ip.kernel.width = p.width;
-    ip.kernel.height = p.height;
-    ip.kernel.depth = p.depth;
+void Interpolate::init(InterpolateParams& ip, RasterizeParams& rp, Attribute& attr) {
+    ip.kernel.width = rp.kernel.width;
+    ip.kernel.height = rp.kernel.height;
+    ip.kernel.depth = rp.kernel.depth;
     ip.kernel.enableDA = rp.kernel.enableDB;
     ip.kernel.rast = rp.kernel.out;
     ip.attrNum = attr.vboNum;
@@ -12,19 +12,19 @@ void Interpolate::init(InterpolateParams& ip, RenderingParams& p, RasterizeParam
     ip.kernel.attr = attr.vbo;
     ip.kernel.idx = attr.vao;
 
-    cudaMalloc(&ip.kernel.out, p.width * p.height * attr.dimention * sizeof(float));
+    CUDA_ERROR_CHECK(cudaMalloc(&ip.kernel.out, rp.kernel.width * rp.kernel.height * attr.dimention * sizeof(float)));
     if (ip.kernel.enableDA) {
         ip.kernel.rastDB = rp.kernel.outDB;
-        cudaMalloc(&ip.kernel.outDA, p.width * p.height * attr.dimention * 2 * sizeof(float));
+        CUDA_ERROR_CHECK(cudaMalloc(&ip.kernel.outDA, rp.kernel.width * rp.kernel.height * attr.dimention * 2 * sizeof(float)));
     }
-    ip.block = getBlock(p.width, p.height);
-    ip.grid = getGrid(ip.block, p.width, p.height);
+    ip.block = getBlock(rp.kernel.width, rp.kernel.height);
+    ip.grid = getGrid(ip.block, rp.kernel.width, rp.kernel.height);
 }
 
-void Interpolate::init(InterpolateParams& ip, RenderingParams& p, RasterizeParams& rp, Attribute& attr, ProjectParams& pp) {
-    ip.kernel.width = p.width;
-    ip.kernel.height = p.height;
-    ip.kernel.depth = p.depth;
+void Interpolate::init(InterpolateParams& ip, RasterizeParams& rp, Attribute& attr, ProjectParams& pp) {
+    ip.kernel.width = rp.kernel.width;
+    ip.kernel.height = rp.kernel.height;
+    ip.kernel.depth = rp.kernel.depth;
     ip.kernel.enableDA = rp.kernel.enableDB;
     ip.kernel.rast = rp.kernel.out;
     ip.kernel.attr = pp.kernel.out;
@@ -33,13 +33,13 @@ void Interpolate::init(InterpolateParams& ip, RenderingParams& p, RasterizeParam
     ip.kernel.idx = attr.vao;
     ip.idxNum = attr.vaoNum;
 
-    cudaMalloc(&ip.kernel.out, p.width * p.height * pp.kernel.dimention * sizeof(float));
+    CUDA_ERROR_CHECK(cudaMalloc(&ip.kernel.out, rp.kernel.width * rp.kernel.height * pp.kernel.dimention * sizeof(float)));
     if (ip.kernel.enableDA) {
         ip.kernel.rastDB = rp.kernel.outDB;
-        cudaMalloc(&ip.kernel.outDA, p.width * p.height * pp.kernel.dimention * 2 * sizeof(float));
+        CUDA_ERROR_CHECK(cudaMalloc(&ip.kernel.outDA, rp.kernel.width * rp.kernel.height * pp.kernel.dimention * 2 * sizeof(float)));
     }
-    ip.block = getBlock(p.width, p.height);
-    ip.grid = getGrid(ip.block, p.width, p.height);
+    ip.block = rp.block;
+    ip.grid = rp.grid;
 }
 
 __global__ void InterplateForwardKernel(const InterpolateKernelParams ip) {
@@ -74,24 +74,24 @@ __global__ void InterplateForwardKernel(const InterpolateKernelParams ip) {
 }
 
 void Interpolate::forward(InterpolateParams& ip) {
-    cudaMemset(ip.kernel.out, 0, ip.kernel.width * ip.kernel.height * ip.kernel.dimention * sizeof(float));
+    CUDA_ERROR_CHECK(cudaMemset(ip.kernel.out, 0, ip.kernel.width * ip.kernel.height * ip.kernel.dimention * sizeof(float)));
     if (ip.kernel.enableDA) {
-        cudaMemset(ip.kernel.outDA, 0, ip.kernel.width * ip.kernel.height * ip.kernel.dimention * 2 * sizeof(float));
+        CUDA_ERROR_CHECK(cudaMemset(ip.kernel.outDA, 0, ip.kernel.width * ip.kernel.height * ip.kernel.dimention * 2 * sizeof(float)));
     }
     void* args[] = { &ip.kernel };
-    cudaLaunchKernel(InterplateForwardKernel, ip.grid, ip.block, args, 0, NULL);
+    CUDA_ERROR_CHECK(cudaLaunchKernel(InterplateForwardKernel, ip.grid, ip.block, args, 0, NULL));
 }
 
-void Interpolate::init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout) {
+void Interpolate::init(InterpolateParams& ip, Attribute& attr, float* dLdout) {
     ip.grad.out = dLdout;
-    cudaMalloc(&ip.grad.attr, ip.attrNum * ip.kernel.dimention * sizeof(float));
-    cudaMalloc(&ip.grad.rast, ip.kernel.width * ip.kernel.height * 4 * sizeof(float));
+    CUDA_ERROR_CHECK(cudaMalloc(&ip.grad.attr, ip.attrNum * ip.kernel.dimention * sizeof(float)));
+    CUDA_ERROR_CHECK(cudaMalloc(&ip.grad.rast, ip.kernel.width * ip.kernel.height * 4 * sizeof(float)));
 }
 
-void Interpolate::init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout, float* dLdda) {
-    init(ip, p, attr, dLdout);
+void Interpolate::init(InterpolateParams& ip, Attribute& attr, float* dLdout, float* dLdda) {
+    init(ip, attr, dLdout);
     ip.grad.outDA = dLdda;
-    cudaMalloc(&ip.grad.rastDB, p.width * p.height * 4 * sizeof(float));
+    CUDA_ERROR_CHECK(cudaMalloc(&ip.grad.rastDB, ip.kernel.width * ip.kernel.height * 4 * sizeof(float)));
 }
 
 // a = u * (a0 - a2) + v * (a1 - a2) + a2
@@ -116,7 +116,7 @@ void Interpolate::init(InterpolateParams& ip, RenderingParams& p, Attribute& att
 // dL/da2 = dL/d(da/dx) * d(da/dx)/da2 + dL/d(da/dy) * d(da/dy)/da2
 //        = -dL/d(da/dx) * du/dx - dL/d(da/dy) * du/dy - dL/d(da/dx) * dv/dx - dL/d(da/dy) * dv/dy = -dL/da0 - dL/da1
 
-__global__ void InterpolateBackwardKernel(const InterpolateKernelParams ip, const InterpolateGradParams grad) {
+__global__ void InterpolateBackwardKernel(const InterpolateKernelParams ip, const InterpolateKernelGradParams grad) {
     int px = blockIdx.x * blockDim.x + threadIdx.x;
     int py = blockIdx.y * blockDim.y + threadIdx.y;
     int pz = blockIdx.z;
@@ -147,7 +147,7 @@ __global__ void InterpolateBackwardKernel(const InterpolateKernelParams ip, cons
 }
 
 void Interpolate::backward(InterpolateParams& ip) {
-    cudaMemset(ip.grad.attr, 0, ip.attrNum * ip.kernel.dimention * sizeof(float));
+    CUDA_ERROR_CHECK(cudaMemset(ip.grad.attr, 0, ip.attrNum * ip.kernel.dimention * sizeof(float)));
     void* args[] = { &ip.kernel,&ip.grad};
-    cudaLaunchKernel(InterpolateBackwardKernel, ip.grid, ip.block, args, 0, NULL);
+    CUDA_ERROR_CHECK(cudaLaunchKernel(InterpolateBackwardKernel, ip.grid, ip.block, args, 0, NULL));
 }

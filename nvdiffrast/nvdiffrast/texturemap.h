@@ -23,7 +23,7 @@ struct TexturemapKernelParams {
 	float* out;
 };
 
-struct TexturemapGradParams {
+struct TexturemapKernelGradParams {
 	float* out;
 
 	float* uv;
@@ -33,7 +33,7 @@ struct TexturemapGradParams {
 
 struct TexturemapParams {
 	TexturemapKernelParams kernel;
-	TexturemapGradParams grad;
+	TexturemapKernelGradParams grad;
 	dim3 grid;
 	dim3 block;
 	dim3 texgrid;
@@ -42,8 +42,8 @@ struct TexturemapParams {
 
 class Texturemap {
 public:
-	static void init(TexturemapParams& tp, RenderingParams& p, RasterizeParams& rp, InterpolateParams& ip, int texwidth, int texheight, int channel, int miplevel);
-	static void init(TexturemapParams& tp, RenderingParams& p, float* dLdout);
+	static void init(TexturemapParams& tp, RasterizeParams& rp, InterpolateParams& ip, int texwidth, int texheight, int channel, int miplevel);
+	static void init(TexturemapParams& tp, float* dLdout);
 	static void forward(TexturemapParams& tp);
 	static void backward(TexturemapParams& tp);
 	static void buildMipTexture(TexturemapParams& tp);

@@ -19,7 +19,7 @@ struct AntialiasKernelParams {
 	float* out;
 };
 
-struct AntialiasGradlParams {
+struct AntialiasKernelGradParams {
 	float* proj;
 	float* in;
 
@@ -28,7 +28,7 @@ struct AntialiasGradlParams {
 
 struct AntialiasParams {
 	AntialiasKernelParams kernel;
-	AntialiasGradlParams grad;
+	AntialiasKernelGradParams grad;
 	dim3 block;
 	dim3 grid;
 	int projNum;
@@ -36,8 +36,8 @@ struct AntialiasParams {
 
 class Antialias {
 public:
-	static void init(AntialiasParams& ap, RenderingParams& p, Attribute& pos, ProjectParams& pp, RasterizeParams& rp, float* in, int channel);
-	static void init(AntialiasParams& ap, RenderingParams& p, RasterizeParams& rp, float* dLdout);
+	static void init(AntialiasParams& ap, Attribute& pos, ProjectParams& pp, RasterizeParams& rp, float* in, int channel);
+	static void init(AntialiasParams& ap, RasterizeParams& rp, float* dLdout);
 	static void forward(AntialiasParams& ap);
 	static void backward(AntialiasParams& ap);
 };

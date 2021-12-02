@@ -22,7 +22,7 @@ struct MaterialKernelParams {
 	float* params;
 };
 
-struct MaterialGradParams {
+struct MaterialKernelGradParams {
 	float* out;
 
 	float* pos;
@@ -35,16 +35,16 @@ struct MaterialGradParams {
 
 struct MaterialParams {
 	MaterialKernelParams kernel;
-	MaterialGradParams grad;
+	MaterialKernelGradParams grad;
 	dim3 block;
 	dim3 grid;
 };
 
 class Material {
 public:
-	static void init(MaterialParams& mp, RenderingParams& p, RasterizeParams& rp, InterpolateParams& pos, InterpolateParams& normal, float* in);
+	static void init(MaterialParams& mp, RasterizeParams& rp, InterpolateParams& pos, InterpolateParams& normal, float* in);
 	static void init(MaterialParams& mp, float3* eye, int lightNum, float3* lightpos, float3* lightintensity, float3 ambient, float Ka, float Kd, float Ks, float shininess);
-	static void init(MaterialParams& mp, RenderingParams& p,  float* dLdout);
+	static void init(MaterialParams& mp, float* dLdout);
 	static void forward(MaterialParams& mp);
 	static void backward(MaterialParams& mp);
 };

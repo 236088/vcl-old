@@ -19,28 +19,16 @@
 
 #define MAX_DIM_PER_BLOCK 32
 
-
-
-
-struct RenderingParams {
-	int width;
-	int height;
-	int depth;
-	dim3 grid;
-	dim3 block;
-};
-
-class Rendering {
-public:
-	static void init(RenderingParams& rp, int width, int height, int depth);
-};
-
-
 dim3 getBlock(int width, int height);
 dim3 getGrid(dim3 block, int width, int height);
 dim3 getGrid(dim3 block, int width, int height, int depth);
 
-void cudaErrorCheck(const char* id, cudaError_t status);
+#define CUDA_ERROR_CHECK(call) do{\
+cudaError_t e = call;\
+if (e != cudaSuccess) {\
+printf("%s in file %s at line %d\n",cudaGetErrorString(e),__FILE__,__LINE__);\
+}\
+}while(0)
 
 static __device__ __forceinline__ float2& operator*=  (float2& a, const float2& b) { a.x *= b.x; a.y *= b.y; return a; }
 static __device__ __forceinline__ float2& operator+=  (float2& a, const float2& b) { a.x += b.x; a.y += b.y; return a; }

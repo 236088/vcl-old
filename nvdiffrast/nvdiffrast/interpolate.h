@@ -19,7 +19,7 @@ struct InterpolateKernelParams {
 	float* outDA;
 };
 
-struct InterpolateGradParams {
+struct InterpolateKernelGradParams {
 	float* out;
 	float* outDA;
 
@@ -30,7 +30,7 @@ struct InterpolateGradParams {
 
 struct InterpolateParams {
 	InterpolateKernelParams kernel;
-	InterpolateGradParams grad;
+	InterpolateKernelGradParams grad;
 	dim3 grid;
 	dim3 block;
 	int attrNum;
@@ -39,10 +39,10 @@ struct InterpolateParams {
 
 class Interpolate {
 public:
-	static void init(InterpolateParams& ip, RenderingParams& p, RasterizeParams& rp, Attribute& attr);
-	static void init(InterpolateParams& ip, RenderingParams& p, RasterizeParams& rp, Attribute& attr, ProjectParams& pp);
-	static void init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout);
-	static void init(InterpolateParams& ip, RenderingParams& p, Attribute& attr, float* dLdout, float* dLdda);
+	static void init(InterpolateParams& ip, RasterizeParams& rp, Attribute& attr);
+	static void init(InterpolateParams& ip, RasterizeParams& rp, Attribute& attr, ProjectParams& pp);
+	static void init(InterpolateParams& ip, Attribute& attr, float* dLdout);
+	static void init(InterpolateParams& ip, Attribute& attr, float* dLdout, float* dLdda);
 	static void forward(InterpolateParams& ip);
 	static void backward(InterpolateParams& ip);
 };

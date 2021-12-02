@@ -1,14 +1,5 @@
 #include "common.h"
 
-void Rendering::init(RenderingParams& rp, int width, int height, int depth) {
-    rp.width = width;
-    rp.height = height;
-    rp.depth = depth;
-    rp.block = getBlock(width, height);
-    rp.grid = getGrid(rp.block, width, height);
-}
-
-
 dim3 getBlock(int width, int height) {
     if (width  >= MAX_DIM_PER_BLOCK &&  height >= MAX_DIM_PER_BLOCK) {
         return dim3(MAX_DIM_PER_BLOCK, MAX_DIM_PER_BLOCK);
@@ -50,9 +41,4 @@ dim3 getGrid(dim3 block, int width, int height, int depth) {
     grid.y = (height + block.y - 1) / block.y;
     grid.z = (depth + block.z - 1) / block.z;
     return grid;
-}
-
-
-void cudaErrorCheck(const char* id, cudaError_t status) {
-    printf("%s: %d, %s\n",id, (int)status, cudaGetErrorString(status));
 }

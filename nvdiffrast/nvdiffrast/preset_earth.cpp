@@ -4,25 +4,23 @@ void PresetEarth::init() {
 	Matrix::init(mat);
 	Matrix::setFovy(mat, 30);
 	Matrix::setEye(mat, 1.5, 1.5, 1.5);
-	Rendering::init(p, 512, 512, 1);
 	Attribute::loadOBJ("../../sphere.obj", &pos, &texel, nullptr);
 	Project::init(pp, mat.mvp, pos, 4);
-	Rasterize::init(rp, p, pp, pos, 1);
-	Interpolate::init(ip, p, rp, texel);
-	Texturemap::init(target_tp, p, rp, ip,2048, 1536, 3, 8);
+	Rasterize::init(rp, pp, pos, 512, 512, 1, 1);
+	Interpolate::init(ip, rp, texel);
+	Texturemap::init(target_tp, rp, ip,2048, 1536, 3, 8);
 	Texturemap::loadBMP(target_tp, "../../earth-texture.bmp");
 	Texturemap::buildMipTexture(target_tp);
-	Antialias::init(target_ap, p, pos, pp, rp, target_tp.kernel.out, 3);
-	Texturemap::init(predict_tp, p, rp, ip,2048, 1536, 3, 4);
-	Antialias::init(predict_ap, p, pos, pp, rp, predict_tp.kernel.out, 3);
-	Loss::init(loss, predict_ap.kernel.out, target_ap.kernel.out, p, 3);
-	Antialias::init(predict_ap, p, rp, loss.grad);
-	Texturemap::init(predict_tp, p, predict_ap.grad.in);
+	Antialias::init(target_ap,  pos, pp, rp, target_tp.kernel.out, 3);
+	Texturemap::init(predict_tp,  rp, ip,2048, 1536, 3, 4);
+	Antialias::init(predict_ap, pos, pp, rp, predict_tp.kernel.out, 3);
+	Loss::init(loss, predict_ap.kernel.out, target_ap.kernel.out, 512, 512, 3);
+	Antialias::init(predict_ap, rp, loss.grad);
+	Texturemap::init(predict_tp, predict_ap.grad.in);
 	Adam::init(tex_adam, predict_tp.kernel.texture[0], predict_tp.grad.texture[0],2048 * 1536 * 3,2048, 1536, 3, 1e-3, 0.9, 0.999, 1e-8);
 
-	Rendering::init(tex_p, 2048, 512, 1);
-	GLbuffer::init(predict_buffer, predict_ap.kernel.out, p.width, p.height, 3, 15);
-	GLbuffer::init(target_buffer, target_ap.kernel.out, p.width, p.height, 3, 14);
+	GLbuffer::init(predict_buffer, predict_ap.kernel.out, 512, 512, 3, 15);
+	GLbuffer::init(target_buffer, target_ap.kernel.out, 512, 512, 3, 14);
 	GLbuffer::init(tex_target_buffer, &target_tp.kernel.texture[0][2048 * 512 * 3], 2048, 512, 3, 13);
 	GLbuffer::init(tex_predict_buffer, &predict_tp.kernel.texture[0][2048 * 512 * 3], 2048, 512, 3, 12);
 }

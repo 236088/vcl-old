@@ -10,21 +10,21 @@ void Matrix::init(Matrix& mat) {
 	mat.aspect = 1.f;
 	mat.znear = .1f;
 	mat.zfar = 10.f;
-	cudaMalloc(&mat.r, 16 * sizeof(float));
-	cudaMalloc(&mat.m, 16 * sizeof(float));
-	cudaMalloc(&mat.mv, 16 * sizeof(float));
-	cudaMalloc(&mat.mvp, 16 * sizeof(float));
+	CUDA_ERROR_CHECK(cudaMalloc(&mat.r, 16 * sizeof(float)));
+	CUDA_ERROR_CHECK(cudaMalloc(&mat.m, 16 * sizeof(float)));
+	CUDA_ERROR_CHECK(cudaMalloc(&mat.mv, 16 * sizeof(float)));
+	CUDA_ERROR_CHECK(cudaMalloc(&mat.mvp, 16 * sizeof(float)));
 }
 
 void Matrix::forward(Matrix& mat) {
 	glm::mat4 matrix = mat.rotation;
-	cudaMemcpy(mat.r, &matrix, 16 * sizeof(float), cudaMemcpyHostToDevice);
+	CUDA_ERROR_CHECK(cudaMemcpy(mat.r, &matrix, 16 * sizeof(float), cudaMemcpyHostToDevice));
 	matrix = glm::translate(mat.translation) * matrix;
-	cudaMemcpy(mat.m, &matrix, 16 * sizeof(float), cudaMemcpyHostToDevice);
+	CUDA_ERROR_CHECK(cudaMemcpy(mat.m, &matrix, 16 * sizeof(float), cudaMemcpyHostToDevice));
 	matrix = glm::lookAt(mat.eye, mat.origin, mat.up) * matrix;
-	cudaMemcpy(mat.mv, &matrix, 16 * sizeof(float), cudaMemcpyHostToDevice);
+	CUDA_ERROR_CHECK(cudaMemcpy(mat.mv, &matrix, 16 * sizeof(float), cudaMemcpyHostToDevice));
 	matrix = glm::perspective(glm::radians(mat.fovy), mat.aspect, mat.znear, mat.zfar) * matrix;
-	cudaMemcpy(mat.mvp, &matrix, 16 * sizeof(float), cudaMemcpyHostToDevice);
+	CUDA_ERROR_CHECK(cudaMemcpy(mat.mvp, &matrix, 16 * sizeof(float), cudaMemcpyHostToDevice));
 }
 
 void Matrix::setRotation(Matrix& mat, float degree, float x, float y, float z) {

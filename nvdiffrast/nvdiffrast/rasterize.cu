@@ -1,14 +1,14 @@
 #include "rasterize.h"
 
-void Rasterize::init(RasterizeParams& rp, RenderingParams& p, float* dLdout) {
+void Rasterize::init(RasterizeParams& rp, float* dLdout) {
     rp.grad.out = dLdout;
-    if (!rp.enableAA)cudaMalloc(&rp.grad.proj, rp.projNum * 4 * sizeof(float));
+    if (!rp.enableAA)CUDA_ERROR_CHECK(cudaMalloc(&rp.grad.proj, rp.projNum * 4 * sizeof(float)));
 }
 
-void Rasterize::init(RasterizeParams& rp, RenderingParams& p, float* dLdout, float* dLddb) {
+void Rasterize::init(RasterizeParams& rp, float* dLdout, float* dLddb) {
     rp.grad.out = dLdout;
     rp.grad.outDB = dLddb;
-    if (!rp.enableAA)cudaMalloc(&rp.grad.proj, rp.projNum * 4 * sizeof(float));
+    if (!rp.enableAA)CUDA_ERROR_CHECK(cudaMalloc(&rp.grad.proj, rp.projNum * 4 * sizeof(float)));
 }
 
 // calculate d[u, v]/d[X, yc, wc]
@@ -83,7 +83,7 @@ void Rasterize::init(RasterizeParams& rp, RenderingParams& p, float* dLdout, flo
 // dL/dw2 = 
 
 
-__global__ void RasterizeBackwardKernel(const RasterizeKernelParams rp, const RasterizeGradParams grad) {
+__global__ void RasterizeBackwardKernel(const RasterizeKernelParams rp, const RasterizeKernelGradParams grad) {
     int px = blockIdx.x * blockDim.x + threadIdx.x;
     int py = blockIdx.y * blockDim.y + threadIdx.y;
     int pz = blockIdx.z;
@@ -144,7 +144,7 @@ __global__ void RasterizeBackwardKernel(const RasterizeKernelParams rp, const Ra
 }
 
 void Rasterize::backward(RasterizeParams& rp) {
-    if (!rp.enableAA) cudaMemset(rp.grad.proj, 0, rp.projNum * 4 * sizeof(float));
+    if (!rp.enableAA) CUDA_ERROR_CHECK(cudaMemset(rp.grad.proj, 0, rp.projNum * 4 * sizeof(float)));
     void* args[] = { &rp.kernel, &rp.grad };
-    cudaLaunchKernel(RasterizeBackwardKernel, rp.grid, rp.block, args, 0, NULL);
+    CUDA_ERROR_CHECK(cudaLaunchKernel(RasterizeBackwardKernel, rp.grid, rp.block, args, 0, NULL));
 }

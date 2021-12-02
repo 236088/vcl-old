@@ -9,6 +9,9 @@ d:\vcl\nvdiffrast\nvdiffrast\x64\debug\preset_cube.obj
 d:\vcl\nvdiffrast\nvdiffrast\x64\debug\matrix.obj
 d:\vcl\nvdiffrast\nvdiffrast\x64\debug\main.obj
 d:\vcl\nvdiffrast\nvdiffrast\x64\debug\common.obj
+d:\vcl\nvdiffrast\x64\debug\nvdiffrast.exe
+d:\vcl\nvdiffrast\nvdiffrast\x64\debug\nvdiffrast.ilk
+d:\vcl\nvdiffrast\x64\debug\nvdiffrast.pdb
 d:\vcl\nvdiffrast\x64\debug\nvdiffrast.lib
 d:\vcl\nvdiffrast\x64\debug\nvdiffrast.exp
 d:\vcl\nvdiffrast\nvdiffrast\x64\debug\antialias.cu.cache
@@ -31,9 +34,6 @@ d:\vcl\nvdiffrast\nvdiffrast\x64\debug\preset.cu.obj
 d:\vcl\nvdiffrast\nvdiffrast\x64\debug\project.cu.obj
 d:\vcl\nvdiffrast\nvdiffrast\x64\debug\rasterize.cu.obj
 d:\vcl\nvdiffrast\nvdiffrast\x64\debug\texturemap.cu.obj
-d:\vcl\nvdiffrast\nvdiffrast\x64\debug\nvdiffrast.ilk
-d:\vcl\nvdiffrast\x64\debug\nvdiffrast.pdb
-d:\vcl\nvdiffrast\x64\debug\nvdiffrast.exe
 d:\vcl\nvdiffrast\nvdiffrast\x64\debug\nvdiffrast.tlog\cl.command.1.tlog
 d:\vcl\nvdiffrast\nvdiffrast\x64\debug\nvdiffrast.tlog\cl.read.1.tlog
 d:\vcl\nvdiffrast\nvdiffrast\x64\debug\nvdiffrast.tlog\cl.write.1.tlog

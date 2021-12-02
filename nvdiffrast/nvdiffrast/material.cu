@@ -1,29 +1,29 @@
 #include "material.h"
 
-void Material::init(MaterialParams& mp, RenderingParams& p, RasterizeParams& rp, InterpolateParams& pos, InterpolateParams& normal, float* in) {
-    mp.kernel.width = p.width;
-    mp.kernel.height = p.height;
-    mp.kernel.depth = p.depth;
+void Material::init(MaterialParams& mp, RasterizeParams& rp, InterpolateParams& pos, InterpolateParams& normal, float* in) {
+    mp.kernel.width = rp.kernel.width;
+    mp.kernel.height = rp.kernel.height;
+    mp.kernel.depth = rp.kernel.depth;
     mp.kernel.pos = pos.kernel.out;
     mp.kernel.normal = normal.kernel.out;
     mp.kernel.rast = rp.kernel.out;
     mp.kernel.in = in;
-    cudaMalloc(&mp.kernel.out, p.width * p.height * 3 * sizeof(float));
-    mp.block = getBlock(p.width, p.height);
-    mp.grid = getGrid(mp.block, p.width, p.height);
+    CUDA_ERROR_CHECK(cudaMalloc(&mp.kernel.out, rp.kernel.width * rp.kernel.height * 3 * sizeof(float)));
+    mp.block = rp.block;
+    mp.grid = rp.grid;
 }
 
 void Material::init(MaterialParams& mp, float3* eye, int lightNum, float3* lightpos, float3* lightintensity, float3 ambient, float Ka, float Kd, float Ks, float shininess) {
     mp.kernel.eye = eye;
     mp.kernel.lightNum = lightNum;
-    cudaMalloc(&mp.kernel.lightpos, lightNum * sizeof(float3));
-    cudaMemcpy(mp.kernel.lightpos, lightpos, lightNum * sizeof(float3), cudaMemcpyHostToDevice);
-    cudaMalloc(&mp.kernel.lightintensity, (lightNum + 1) * sizeof(float3));
-    cudaMemcpy(mp.kernel.lightintensity, &ambient, sizeof(float3), cudaMemcpyHostToDevice);
-    cudaMemcpy(&mp.kernel.lightintensity[1], lightintensity, lightNum * sizeof(float3), cudaMemcpyHostToDevice);
-    cudaMalloc(&mp.kernel.params, 4 * sizeof(float));
+    CUDA_ERROR_CHECK(cudaMalloc(&mp.kernel.lightpos, lightNum * sizeof(float3)));
+    CUDA_ERROR_CHECK(cudaMemcpy(mp.kernel.lightpos, lightpos, lightNum * sizeof(float3), cudaMemcpyHostToDevice));
+    CUDA_ERROR_CHECK(cudaMalloc(&mp.kernel.lightintensity, (lightNum + 1) * sizeof(float3)));
+    CUDA_ERROR_CHECK(cudaMemcpy(mp.kernel.lightintensity, &ambient, sizeof(float3), cudaMemcpyHostToDevice));
+    CUDA_ERROR_CHECK(cudaMemcpy(&mp.kernel.lightintensity[1], lightintensity, lightNum * sizeof(float3), cudaMemcpyHostToDevice));
+    CUDA_ERROR_CHECK(cudaMalloc(&mp.kernel.params, 4 * sizeof(float)));
     float params[4]{ Ka, Kd,  Ks,  shininess };
-    cudaMemcpy(mp.kernel.params, params, 4 * sizeof(float), cudaMemcpyHostToDevice);
+    CUDA_ERROR_CHECK(cudaMemcpy(mp.kernel.params, params, 4 * sizeof(float), cudaMemcpyHostToDevice));
 }
 
 __global__ void MaterialForwardKernel(const MaterialKernelParams mp) {
@@ -62,20 +62,20 @@ __global__ void MaterialForwardKernel(const MaterialKernelParams mp) {
 }
 
 void Material::forward(MaterialParams& mp) {
-    cudaMemset(mp.kernel.out, 0, mp.kernel.width * mp.kernel.height * 3 * sizeof(float));
+    CUDA_ERROR_CHECK(cudaMemset(mp.kernel.out, 0, mp.kernel.width * mp.kernel.height * 3 * sizeof(float)));
     void* args[] = { &mp.kernel};
-    cudaLaunchKernel(MaterialForwardKernel, mp.grid, mp.block, args, 0, NULL);
+    CUDA_ERROR_CHECK(cudaLaunchKernel(MaterialForwardKernel, mp.grid, mp.block, args, 0, NULL));
 }
 
-void Material::init(MaterialParams& mp, RenderingParams& p, float* dLdout) {
+void Material::init(MaterialParams& mp, float* dLdout) {
     mp.grad.out = dLdout;
-    cudaMalloc(&mp.grad.in, p.width * p.height * 3 * sizeof(float));
-    cudaMalloc(&mp.grad.lightpos, mp.kernel.lightNum * sizeof(float3));
-    cudaMalloc(&mp.grad.lightintensity, (mp.kernel.lightNum + 1) * sizeof(float3));
-    cudaMalloc(&mp.grad.params, 4 * sizeof(float));
+    CUDA_ERROR_CHECK(cudaMalloc(&mp.grad.in, mp.kernel.width * mp.kernel.height * 3 * sizeof(float)));
+    CUDA_ERROR_CHECK(cudaMalloc(&mp.grad.lightpos, mp.kernel.lightNum * sizeof(float3)));
+    CUDA_ERROR_CHECK(cudaMalloc(&mp.grad.lightintensity, (mp.kernel.lightNum + 1) * sizeof(float3)));
+    CUDA_ERROR_CHECK(cudaMalloc(&mp.grad.params, 4 * sizeof(float)));
 }
 
-__global__ void MaterialBackwardKernel(const MaterialKernelParams mp, const MaterialGradParams grad) {
+__global__ void MaterialBackwardKernel(const MaterialKernelParams mp, const MaterialKernelGradParams grad) {
     int px = blockIdx.x * blockDim.x + threadIdx.x;
     int py = blockIdx.y * blockDim.y + threadIdx.y;
     int pz = blockIdx.z;
@@ -124,10 +124,10 @@ __global__ void MaterialBackwardKernel(const MaterialKernelParams mp, const Mate
 }
 
 void Material::backward(MaterialParams& mp) {
-    cudaMemset(mp.grad.in, 0, mp.kernel.width * mp.kernel.height * 3 * sizeof(float));
-    cudaMemset(&mp.grad.lightpos, 0, mp.kernel.lightNum * sizeof(float3));
-    cudaMemset(&mp.grad.lightintensity, 0, (mp.kernel.lightNum + 1) * sizeof(float3));
-    cudaMemset(&mp.grad.params, 0, 4 * sizeof(float));
+    CUDA_ERROR_CHECK(cudaMemset(mp.grad.in, 0, mp.kernel.width * mp.kernel.height * 3 * sizeof(float)));
+    CUDA_ERROR_CHECK(cudaMemset(mp.grad.lightpos, 0, mp.kernel.lightNum * sizeof(float3)));
+    CUDA_ERROR_CHECK(cudaMemset(mp.grad.lightintensity, 0, (mp.kernel.lightNum + 1) * sizeof(float3)));
+    CUDA_ERROR_CHECK(cudaMemset(mp.grad.params, 0, 4 * sizeof(float)));
     void* args[] = { &mp.kernel, &mp.grad };
-    cudaLaunchKernel(MaterialBackwardKernel, mp.grid, mp.block, args, 0, NULL);
+    CUDA_ERROR_CHECK(cudaLaunchKernel(MaterialBackwardKernel, mp.grid, mp.block, args, 0, NULL));
 }
