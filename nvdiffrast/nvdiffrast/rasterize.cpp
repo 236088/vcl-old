@@ -62,7 +62,7 @@ static void linkProgram(GLuint* program, GLuint vertexShader, GLuint geometrySha
 	}
 }
 
-void Rasterize::init(RasterizeParams& rp, ProjectParams& pp, Attribute& proj, int width, int height, int depth, int enableDB)
+void Rasterize::init(RasterizeParams& rp, ProjectParams& pp, int width, int height, int depth, int enableDB)
 {
 	rp.kernel.width = width;
 	rp.kernel.height = height;
@@ -71,13 +71,13 @@ void Rasterize::init(RasterizeParams& rp, ProjectParams& pp, Attribute& proj, in
 	rp.kernel.enableDB = enableDB;
 	rp.kernel.xs = 2.f / float(width);
 	rp.kernel.ys = 2.f / float(height);
-	rp.kernel.idx =proj.vao;
-	rp.projNum =proj.vboNum;
-	rp.idxNum =proj.vaoNum;
-	CUDA_ERROR_CHECK(cudaMallocHost(&rp.gl_proj,proj.vboNum * 4 * sizeof(float)));
-	CUDA_ERROR_CHECK(cudaMallocHost(&rp.gl_idx,proj.vaoNum * 3* sizeof(unsigned int)));
-	CUDA_ERROR_CHECK(cudaMemcpy(rp.gl_proj, rp.kernel.proj,proj.vboNum * 4 * sizeof(float), cudaMemcpyDeviceToHost));
-	CUDA_ERROR_CHECK(cudaMemcpy(rp.gl_idx, rp.kernel.idx,proj.vaoNum * 3 * sizeof(unsigned int), cudaMemcpyDeviceToHost));
+	rp.kernel.idx =pp.vao;
+	rp.projNum =pp.kernel.vboNum;
+	rp.idxNum =pp.vaoNum;
+	CUDA_ERROR_CHECK(cudaMallocHost(&rp.gl_proj,pp.kernel.vboNum * 4 * sizeof(float)));
+	CUDA_ERROR_CHECK(cudaMallocHost(&rp.gl_idx,pp.vaoNum * 3* sizeof(unsigned int)));
+	CUDA_ERROR_CHECK(cudaMemcpy(rp.gl_proj, rp.kernel.proj,pp.kernel.vboNum * 4 * sizeof(float), cudaMemcpyDeviceToHost));
+	CUDA_ERROR_CHECK(cudaMemcpy(rp.gl_idx, rp.kernel.idx,pp.vaoNum * 3 * sizeof(unsigned int), cudaMemcpyDeviceToHost));
 	CUDA_ERROR_CHECK(cudaMallocHost(&rp.gl_out, width * height * 4 * sizeof(float)));
 	CUDA_ERROR_CHECK(cudaMallocHost(&rp.gl_outDB, width * height * 4 * sizeof(float)));
 	CUDA_ERROR_CHECK(cudaMalloc(&rp.kernel.out, width * height * 4 * sizeof(float)));

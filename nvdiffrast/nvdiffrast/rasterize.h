@@ -48,7 +48,7 @@ struct RasterizeParams {
 
 class Rasterize {
 public:
-	static void init(RasterizeParams& rp, ProjectParams& pp, Attribute& proj, int width, int heoght, int depth, int enableDB);
+	static void init(RasterizeParams& rp, ProjectParams& pp, int width, int heoght, int depth, int enableDB);
 	static void init(RasterizeParams& rp,  float* dLdout);
 	static void init(RasterizeParams& rp,  float* dLdout, float* dLddb);
 	static void forward(RasterizeParams& rp);

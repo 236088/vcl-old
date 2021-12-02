@@ -36,7 +36,7 @@ struct AntialiasParams {
 
 class Antialias {
 public:
-	static void init(AntialiasParams& ap, Attribute& pos, ProjectParams& pp, RasterizeParams& rp, float* in, int channel);
+	static void init(AntialiasParams& ap, ProjectParams& pp, RasterizeParams& rp, float* in, int channel);
 	static void init(AntialiasParams& ap, RasterizeParams& rp, float* dLdout);
 	static void forward(AntialiasParams& ap);
 	static void backward(AntialiasParams& ap);

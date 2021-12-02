@@ -40,7 +40,7 @@ struct InterpolateParams {
 class Interpolate {
 public:
 	static void init(InterpolateParams& ip, RasterizeParams& rp, Attribute& attr);
-	static void init(InterpolateParams& ip, RasterizeParams& rp, Attribute& attr, ProjectParams& pp);
+	static void init(InterpolateParams& ip, RasterizeParams& rp, ProjectParams& pp);
 	static void init(InterpolateParams& ip, Attribute& attr, float* dLdout);
 	static void init(InterpolateParams& ip, Attribute& attr, float* dLdout, float* dLdda);
 	static void forward(InterpolateParams& ip);

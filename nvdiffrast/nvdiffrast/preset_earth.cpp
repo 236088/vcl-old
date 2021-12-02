@@ -6,14 +6,14 @@ void PresetEarth::init() {
 	Matrix::setEye(mat, 1.5, 1.5, 1.5);
 	Attribute::loadOBJ("../../sphere.obj", &pos, &texel, nullptr);
 	Project::init(pp, mat.mvp, pos, 4);
-	Rasterize::init(rp, pp, pos, 512, 512, 1, 1);
+	Rasterize::init(rp, pp, 512, 512, 1, 1);
 	Interpolate::init(ip, rp, texel);
 	Texturemap::init(target_tp, rp, ip,2048, 1536, 3, 8);
 	Texturemap::loadBMP(target_tp, "../../earth-texture.bmp");
 	Texturemap::buildMipTexture(target_tp);
-	Antialias::init(target_ap,  pos, pp, rp, target_tp.kernel.out, 3);
+	Antialias::init(target_ap, pp, rp, target_tp.kernel.out, 3);
 	Texturemap::init(predict_tp,  rp, ip,2048, 1536, 3, 4);
-	Antialias::init(predict_ap, pos, pp, rp, predict_tp.kernel.out, 3);
+	Antialias::init(predict_ap,  pp, rp, predict_tp.kernel.out, 3);
 	Loss::init(loss, predict_ap.kernel.out, target_ap.kernel.out, 512, 512, 3);
 	Antialias::init(predict_ap, rp, loss.grad);
 	Texturemap::init(predict_tp, predict_ap.grad.in);

@@ -1,15 +1,15 @@
 #include "antialias.h"
 
-void Antialias::init(AntialiasParams& ap, Attribute& pos, ProjectParams& pp, RasterizeParams& rp, float* in, int channel) {
+void Antialias::init(AntialiasParams& ap, ProjectParams& pp, RasterizeParams& rp, float* in, int channel) {
     ap.kernel.width = rp.kernel.width;
     ap.kernel.height = rp.kernel.height;
     ap.kernel.depth = rp.kernel.depth;
     ap.kernel.channel = channel;
     ap.kernel.proj = pp.kernel.out;
-    ap.kernel.idx = pos.vao;
+    ap.kernel.idx = pp.vao;
     ap.kernel.rast = rp.kernel.out;
     ap.kernel.in = in;
-    ap.projNum = pos.vboNum;
+    ap.projNum = pp.kernel.vboNum;
     ap.kernel.xh = rp.kernel.width / 2.f;
     ap.kernel.yh = rp.kernel.height / 2.f;
     CUDA_ERROR_CHECK(cudaMalloc(&ap.kernel.out, rp.kernel.width * rp.kernel.height * channel * sizeof(float)));

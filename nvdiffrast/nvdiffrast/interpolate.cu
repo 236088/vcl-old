@@ -21,17 +21,17 @@ void Interpolate::init(InterpolateParams& ip, RasterizeParams& rp, Attribute& at
     ip.grid = getGrid(ip.block, rp.kernel.width, rp.kernel.height);
 }
 
-void Interpolate::init(InterpolateParams& ip, RasterizeParams& rp, Attribute& attr, ProjectParams& pp) {
+void Interpolate::init(InterpolateParams& ip, RasterizeParams& rp, ProjectParams& pp) {
     ip.kernel.width = rp.kernel.width;
     ip.kernel.height = rp.kernel.height;
     ip.kernel.depth = rp.kernel.depth;
     ip.kernel.enableDA = rp.kernel.enableDB;
     ip.kernel.rast = rp.kernel.out;
     ip.kernel.attr = pp.kernel.out;
-    ip.attrNum = pp.kernel.size;
+    ip.attrNum = pp.kernel.vboNum;
     ip.kernel.dimention = pp.kernel.dimention;
-    ip.kernel.idx = attr.vao;
-    ip.idxNum = attr.vaoNum;
+    ip.kernel.idx = pp.vao;
+    ip.idxNum = pp.vaoNum;
 
     CUDA_ERROR_CHECK(cudaMalloc(&ip.kernel.out, rp.kernel.width * rp.kernel.height * pp.kernel.dimention * sizeof(float)));
     if (ip.kernel.enableDA) {

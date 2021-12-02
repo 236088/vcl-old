@@ -8,12 +8,12 @@ void PresetPrimitives::init() {
 	Matrix::setFovy(mat, 60);
 	Matrix::setEye(mat, 1.5f, .5f, 1.5f);
 	Project::init(pp, mat.mvp, pos, 4);
-	Rasterize::init(rp, pp, pos, width, height, 1, 1);
+	Rasterize::init(rp, pp, width, height, 1, 1);
 	Interpolate::init(ip, rp, texel);
 	Project::init(pos_pp, mat.m, pos, 3);
-	Interpolate::init(pos_ip, rp, pos, pos_pp);
+	Interpolate::init(pos_ip, rp, pos_pp);
 	Project::init(norm_pp, mat.r, normal, 3);
-	Interpolate::init(norm_ip, rp, normal, norm_pp);
+	Interpolate::init(norm_ip, rp, norm_pp);
 	Texturemap::init(tp, rp, ip, 1024, 1024, 3, 8);
 	Texturemap::loadBMP(tp, "../../checker.bmp");
 	Texturemap::buildMipTexture(tp);
@@ -26,7 +26,7 @@ void PresetPrimitives::init() {
 	};
 	float3 ambient = make_float3(1.f, 1.f, 1.f);
 	Material::init(mp, (float3*)&mat.eye, 1, lightpos, lightintensity, ambient, .2f, .6f, .8f, 4.f);
-	Antialias::init(ap, pos, pp, rp, mp.kernel.out, 3);
+	Antialias::init(ap, pp, rp, mp.kernel.out, 3);
 	Filter::init(fp, rp, ap.kernel.out, 3, 16);
 
 	GLbuffer::init(rp_buffer, rp.kernel.out, width, height, 4, 15);

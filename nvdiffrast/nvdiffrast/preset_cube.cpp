@@ -39,34 +39,34 @@ void PresetCube::init(int resolution) {
 	Randomize();
 
 	Project::init(predict_pp, mat.mvp, predict_pos, 4);
-	Rasterize::init(predict_rp, predict_pp, predict_pos, resolution, resolution, 1, 0);
+	Rasterize::init(predict_rp, predict_pp, resolution, resolution, 1, 0);
 	Interpolate::init(predict_ip, predict_rp, predict_color);
-	Antialias::init(predict_ap, predict_pos, predict_pp, predict_rp, predict_ip.kernel.out, 3);
+	Antialias::init(predict_ap, predict_pp, predict_rp, predict_ip.kernel.out, 3);
 
 	Project::init(target_pp, mat.mvp, target_pos, 4);
-	Rasterize::init(target_rp, target_pp, target_pos, resolution, resolution, 1, 0);
+	Rasterize::init(target_rp, target_pp, resolution, resolution, 1, 0);
 	Interpolate::init(target_ip, target_rp, target_color);
-	Antialias::init(target_ap, target_pos, target_pp, target_rp, target_ip.kernel.out, 3);
+	Antialias::init(target_ap, target_pp, target_rp, target_ip.kernel.out, 3);
 
 	Loss::init(loss, predict_ap.kernel.out, target_ap.kernel.out, 512, 512, 3);
 	Antialias::init(predict_ap, predict_rp, loss.grad);
 	Interpolate::init(predict_ip, predict_color, predict_ap.grad.in);
 	Rasterize::init(predict_rp, predict_ip.grad.rast);
 	Project::init(predict_pp, predict_pos, predict_rp.grad.proj);
-	Adam::init(pos_adam, predict_pos, predict_pp.grad.vec, 1e-2, 0.9, 0.999, 1e-8);
+	Adam::init(pos_adam, predict_pos, predict_pp.grad.vbo, 1e-2, 0.9, 0.999, 1e-8);
 	Adam::init(color_adam, predict_color, predict_ip.grad.attr, 1e-2, 0.9, 0.999, 1e-8);
 	Loss::init(pos_loss, predict_pos.vbo, target_pos.vbo, target_pos.vboNum, target_pos.dimention, 1);
 	Loss::init(color_loss, predict_color.vbo, target_color.vbo, target_color.vboNum, target_color.dimention, 1);
 
 	Project::init(hr_predict_pp, hr_mat.mvp, predict_pos, 4);
-	Rasterize::init(hr_predict_rp, hr_predict_pp, predict_pos, 512, 512, 1, 0);
+	Rasterize::init(hr_predict_rp, hr_predict_pp, 512, 512, 1, 0);
 	Interpolate::init(hr_predict_ip, hr_predict_rp, predict_color);
-	Antialias::init(hr_predict_ap,predict_pos, hr_predict_pp, hr_predict_rp, hr_predict_ip.kernel.out, 3);
+	Antialias::init(hr_predict_ap, hr_predict_pp, hr_predict_rp, hr_predict_ip.kernel.out, 3);
 
 	Project::init(hr_target_pp, hr_mat.mvp, target_pos, 4);
-	Rasterize::init(hr_target_rp, hr_target_pp, target_pos, 512, 512, 1, 0);
+	Rasterize::init(hr_target_rp, hr_target_pp, 512, 512, 1, 0);
 	Interpolate::init(hr_target_ip, hr_target_rp, target_color);
-	Antialias::init(hr_target_ap, target_pos, hr_target_pp, hr_target_rp, hr_target_ip.kernel.out, 3);
+	Antialias::init(hr_target_ap,  hr_target_pp, hr_target_rp, hr_target_ip.kernel.out, 3);
 
 	GLbuffer::init(target_buffer, target_ap.kernel.out, resolution, resolution, 3, 15);
 	GLbuffer::init(predict_buffer, predict_ap.kernel.out, resolution, resolution, 3, 14);
