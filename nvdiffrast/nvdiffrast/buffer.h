@@ -1,12 +1,3 @@
-#pragma once
-#include "common.h"
-
-struct Attribute {
-	float* vbo;
-	unsigned int* vao;
-	int vboNum;
-	int vaoNum;
-	int dimention;
-	static void init(Attribute& attr, int vboNum, int vaoNum, int dimention);
-	static void loadOBJ(const char* path, Attribute* pos, Attribute* texel, Attribute* normal);
-};
+version https://git-lfs.github.com/spec/v1
+oid sha256:83de4f471841d9f13532cacaa628912d5168df7305787a6b166112e9c51eb330
+size 483
