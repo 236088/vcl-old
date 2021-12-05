@@ -17,7 +17,6 @@
     <ClCompile Include="preset_cube.cpp" />
     <ClCompile Include="preset_earth.cpp" />
     <ClCompile Include="preset_filter.cpp" />
-    <ClCompile Include="preset_material.cpp" />
     <ClCompile Include="preset_primitives.cpp" />
     <ClCompile Include="rasterize.cpp" />
   </ItemGroup>
@@ -26,6 +25,7 @@
     <ClInclude Include="buffer.h" />
     <ClInclude Include="common.h" />
     <ClInclude Include="interpolate.h" />
+    <ClInclude Include="loss.h" />
     <ClInclude Include="material.h" />
     <ClInclude Include="matrix.h" />
     <ClInclude Include="optimize.h" />
@@ -40,6 +40,7 @@
     <CudaCompile Include="buffer.cu" />
     <CudaCompile Include="filter.cu" />
     <CudaCompile Include="interpolate.cu" />
+    <CudaCompile Include="loss.cu" />
     <CudaCompile Include="material.cu" />
     <CudaCompile Include="optimize.cu" />
     <CudaCompile Include="preset.cu" />
